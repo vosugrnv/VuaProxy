@@ -1,0 +1,218 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/vi/tat-ca-san-pham/:slug.html",
+      "destination": "/tat-ca-san-pham/:slug",
+      "permanent": true
+    },
+    {
+      "source": "/vi/tat-ca-san-pham/:slug",
+      "destination": "/tat-ca-san-pham/:slug",
+      "permanent": true
+    },
+    {
+      "source": "/vi/tat-ca-san-pham",
+      "destination": "/tat-ca-san-pham",
+      "permanent": true
+    },
+    {
+      "source": "/vi/chia-se/:slug.html",
+      "destination": "/chia-se/:slug",
+      "permanent": true
+    },
+    {
+      "source": "/vi/chia-se/:slug",
+      "destination": "/chia-se/:slug",
+      "permanent": true
+    },
+    {
+      "source": "/vi/chia-se",
+      "destination": "/chia-se",
+      "permanent": true
+    },
+    {
+      "source": "/vi/danh-sach-san-pham",
+      "destination": "/danh-sach-san-pham",
+      "permanent": true
+    },
+    {
+      "source": "/vi/danh-sach-san-pham/:path*",
+      "destination": "/danh-sach-san-pham/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:file([a-z0-9-]+-[0-9]+).html",
+      "destination": "/tat-ca-san-pham/:file",
+      "permanent": true
+    },
+    {
+      "source": "/:page([a-z0-9-]+).html",
+      "destination": "/:page",
+      "permanent": true
+    },
+    {
+      "source": "/vi/danh-sach-chia-se",
+      "destination": "/danh-sach-chia-se",
+      "permanent": true
+    },
+    {
+      "source": "/vi/danh-sach-chia-se/:path*",
+      "destination": "/danh-sach-chia-se/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/vi/danh-sach-shop",
+      "destination": "/danh-sach-shop",
+      "permanent": true
+    },
+    {
+      "source": "/vi/danh-sach-shop/:path*",
+      "destination": "/danh-sach-shop/:path*",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://187.52.116.85/api/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "http://187.52.116.85/uploads/:path*"
+    },
+    {
+      "source": "/tat-ca-san-pham/:parent/:child",
+      "destination": "/tat-ca-san-pham"
+    },
+    {
+      "source": "/tat-ca-san-pham/:slug(.*-[0-9]+)",
+      "destination": "/vi/tat-ca-san-pham/:slug"
+    },
+    {
+      "source": "/tat-ca-san-pham/:parent",
+      "destination": "/tat-ca-san-pham"
+    },
+    {
+      "source": "/chia-se/:slug",
+      "destination": "/vi/chia-se/:slug"
+    },
+    {
+      "source": "/danh-sach-san-pham",
+      "destination": "/vi/danh-sach-san-pham"
+    },
+    {
+      "source": "/danh-sach-san-pham/",
+      "destination": "/vi/danh-sach-san-pham"
+    },
+    {
+      "source": "/danh-sach-san-pham/trang-:n",
+      "destination": "/vi/danh-sach-san-pham/trang-:n"
+    },
+    {
+      "source": "/danh-sach-shop/trang-:n",
+      "destination": "/vi/danh-sach-shop/trang-:n"
+    },
+    {
+      "source": "/danh-sach-shop/",
+      "destination": "/vi/danh-sach-shop"
+    },
+    {
+      "source": "/danh-sach-shop",
+      "destination": "/vi/danh-sach-shop"
+    },
+    {
+      "source": "/danh-sach-chia-se/trang-:n",
+      "destination": "/vi/danh-sach-chia-se/trang-:n"
+    },
+    {
+      "source": "/danh-sach-chia-se/",
+      "destination": "/vi/danh-sach-chia-se"
+    },
+    {
+      "source": "/danh-sach-chia-se",
+      "destination": "/vi/danh-sach-chia-se"
+    },
+    {
+      "source": "/tin-nhan/:peer",
+      "destination": "/tin-nhan"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.vuammovn.pro"
+        }
+      ],
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/index.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.vuammovn.pro"
+        }
+      ],
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/admin",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.vuammovn.pro"
+        }
+      ],
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/:slug([a-z0-9][a-z0-9-]{0,62})",
+      "destination": "/shop?slug=:slug"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.(js|css|png|jpg|jpeg|webp|svg|ico|woff2)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/admin",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.vuammovn.pro"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/admin.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.vuammovn.pro"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vuammovn.pro/sitemap.xml
+Sitemap: https://vuammovn.pro/sitemap-index.xml
