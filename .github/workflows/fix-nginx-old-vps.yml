@@ -1,0 +1,66 @@
+name: fix-nginx-old-vps
+on:
+  workflow_dispatch:
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Fix nginx path proxy
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.52.116.85"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 "root@$DEST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          mkdir -p /etc/nginx/snippets
+          cat > /etc/nginx/snippets/vuaproxy-api-location.conf <<'SNIP'
+          location /vuaproxy-api/ {
+            proxy_pass http://127.0.0.1:3101/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            client_max_body_size 20m;
+          }
+          location /vuaproxy-uploads/ {
+            alias /var/www/vuaproxy/uploads/;
+            access_log off;
+            expires 7d;
+          }
+          SNIP
+
+          # Ensure a dedicated :80 server for this IP (avoid fighting default_server)
+          cat > /etc/nginx/conf.d/vuaproxy-path.conf <<'NGX'
+          server {
+            listen 80;
+            listen [::]:80;
+            server_name 187.52.116.85;
+            include /etc/nginx/snippets/vuaproxy-api-location.conf;
+          }
+          NGX
+
+          # Also inject into any vuammo site that already proxies 3100
+          for CFG in $(grep -Rl 'proxy_pass http://127.0.0.1:3100' /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null || true); do
+            if ! grep -q 'vuaproxy-api-location.conf' "$CFG"; then
+              sed -i '0,/server {/s//server {\n    include \/etc\/nginx\/snippets\/vuaproxy-api-location.conf;/' "$CFG" || true
+            fi
+            echo "patched $CFG"
+          done
+
+          nginx -t
+          systemctl reload nginx
+          sleep 1
+          echo '--- 3101 ---'
+          curl -sS http://127.0.0.1:3101/health; echo
+          echo '--- path ---'
+          curl -sS -H 'Host: 187.52.116.85' http://127.0.0.1/vuaproxy-api/health; echo
+          echo '--- uploads ---'
+          curl -sS -o /dev/null -w '%{http_code}\n' -H 'Host: 187.52.116.85' http://127.0.0.1/vuaproxy-uploads/
+          pm2 list | grep vuaproxy || true
+          REMOTE
