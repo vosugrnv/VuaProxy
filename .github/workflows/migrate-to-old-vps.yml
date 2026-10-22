@@ -1,0 +1,89 @@
+name: migrate-to-old-vps
+on:
+  workflow_dispatch:
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Pack from source VPS (187.127.207.14)
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          SRC: "187.127.207.14"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@$SRC"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          $SSH 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          mkdir -p /tmp/vuaproxy-pack
+          rm -rf /tmp/vuaproxy-pack/*
+          cd /var/www/vuaproxy-api
+          tar -czf /tmp/vuaproxy-pack/api.tar.gz \
+            --exclude=node_modules --exclude=.env --exclude=data/vpn-pool \
+            .
+          cp -f /var/www/vuaproxy-api/.env /tmp/vuaproxy-pack/env.prod
+          if [ -d /var/www/vuaproxy/uploads ]; then
+            tar -czf /tmp/vuaproxy-pack/uploads.tar.gz -C /var/www/vuaproxy uploads
+          else
+            mkdir -p /tmp/vuaproxy-empty/uploads
+            tar -czf /tmp/vuaproxy-pack/uploads.tar.gz -C /tmp/vuaproxy-empty uploads
+          fi
+          # DB dump: parse DATABASE_URL
+          URL=$(grep '^DATABASE_URL=' /var/www/vuaproxy-api/.env | cut -d= -f2-)
+          # Prefer docker exec pg_dump if container exists
+          if docker ps --format '{{.Names}}' | grep -qx vuaproxy-pg; then
+            docker exec vuaproxy-pg pg_dump -U vuaproxy -d vuaproxy -Fc -f /tmp/vuaproxy.dump || \
+              docker exec vuaproxy-pg pg_dump -U postgres -d vuaproxy -Fc -f /tmp/vuaproxy.dump
+            docker cp vuaproxy-pg:/tmp/vuaproxy.dump /tmp/vuaproxy-pack/db.dump
+          elif docker ps --format '{{.Names}}' | grep -qx supabase-db; then
+            docker exec supabase-db pg_dump -U postgres -d vuaproxy -Fc -f /tmp/vuaproxy.dump
+            docker cp supabase-db:/tmp/vuaproxy.dump /tmp/vuaproxy-pack/db.dump
+          else
+            pg_dump "$URL" -Fc -f /tmp/vuaproxy-pack/db.dump
+          fi
+          ls -lh /tmp/vuaproxy-pack
+          tar -czf /tmp/vuaproxy-migrate.tgz -C /tmp/vuaproxy-pack .
+          ls -lh /tmp/vuaproxy-migrate.tgz
+          REMOTE
+          mkdir -p /tmp/mig
+          $SCP "root@$SRC:/tmp/vuaproxy-migrate.tgz" /tmp/mig/vuaproxy-migrate.tgz
+          ls -lh /tmp/mig/vuaproxy-migrate.tgz
+
+      - name: Restore onto destination VPS (187.52.116.85)
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.52.116.85"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@$DEST"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          $SCP /tmp/mig/vuaproxy-migrate.tgz "root@$DEST:/tmp/vuaproxy-migrate.tgz"
+          $SCP scripts/remote-restore-vuaproxy-on-old.sh "root@$DEST:/tmp/remote-restore-vuaproxy-on-old.sh"
+          $SSH 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          sed -i 's/\r$//' /tmp/remote-restore-vuaproxy-on-old.sh
+          rm -rf /tmp/vuaproxy-migrate
+          mkdir -p /tmp/vuaproxy-migrate
+          tar -xzf /tmp/vuaproxy-migrate.tgz -C /tmp/vuaproxy-migrate
+          ls -lh /tmp/vuaproxy-migrate
+          bash /tmp/remote-restore-vuaproxy-on-old.sh
+          REMOTE
+
+      - name: Stop API on source VPS (avoid double-write)
+        if: success()
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          SRC: "187.127.207.14"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 "root@$SRC" \
+            'pm2 stop vuaproxy-api || true; pm2 save || true; echo stopped; curl -sS -m 3 http://127.0.0.1:3101/health || echo offline'

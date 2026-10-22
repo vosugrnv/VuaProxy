@@ -4,6 +4,1966 @@
   "trailingSlash": false,
   "redirects": [
     {
+      "source": "/tat-ca-khu-vuc/us",
+      "destination": "/tat-ca-khu-vuc/proxy-my",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/united-states",
+      "destination": "/tat-ca-khu-vuc/proxy-my",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gb",
+      "destination": "/tat-ca-khu-vuc/proxy-anh",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/united-kingdom",
+      "destination": "/tat-ca-khu-vuc/proxy-anh",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/jp",
+      "destination": "/tat-ca-khu-vuc/proxy-nhat-ban",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/japan",
+      "destination": "/tat-ca-khu-vuc/proxy-nhat-ban",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/de",
+      "destination": "/tat-ca-khu-vuc/proxy-duc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/germany",
+      "destination": "/tat-ca-khu-vuc/proxy-duc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/fr",
+      "destination": "/tat-ca-khu-vuc/proxy-phap",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/france",
+      "destination": "/tat-ca-khu-vuc/proxy-phap",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ca",
+      "destination": "/tat-ca-khu-vuc/proxy-canada",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/canada",
+      "destination": "/tat-ca-khu-vuc/proxy-canada",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bd",
+      "destination": "/tat-ca-khu-vuc/proxy-bangladesh",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bangladesh",
+      "destination": "/tat-ca-khu-vuc/proxy-bangladesh",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/in",
+      "destination": "/tat-ca-khu-vuc/proxy-an-do",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/india",
+      "destination": "/tat-ca-khu-vuc/proxy-an-do",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/id",
+      "destination": "/tat-ca-khu-vuc/proxy-indonesia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/indonesia",
+      "destination": "/tat-ca-khu-vuc/proxy-indonesia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/hk",
+      "destination": "/tat-ca-khu-vuc/proxy-hong-kong",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/hong-kong",
+      "destination": "/tat-ca-khu-vuc/proxy-hong-kong",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ae",
+      "destination": "/tat-ca-khu-vuc/proxy-uae",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/uae",
+      "destination": "/tat-ca-khu-vuc/proxy-uae",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/au",
+      "destination": "/tat-ca-khu-vuc/proxy-uc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/australia",
+      "destination": "/tat-ca-khu-vuc/proxy-uc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/af",
+      "destination": "/tat-ca-khu-vuc/proxy-afghanistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/afghanistan",
+      "destination": "/tat-ca-khu-vuc/proxy-afghanistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/al",
+      "destination": "/tat-ca-khu-vuc/proxy-albania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/albania",
+      "destination": "/tat-ca-khu-vuc/proxy-albania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/dz",
+      "destination": "/tat-ca-khu-vuc/proxy-algeria",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/algeria",
+      "destination": "/tat-ca-khu-vuc/proxy-algeria",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ad",
+      "destination": "/tat-ca-khu-vuc/proxy-andorra",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/andorra",
+      "destination": "/tat-ca-khu-vuc/proxy-andorra",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ao",
+      "destination": "/tat-ca-khu-vuc/proxy-angola",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/angola",
+      "destination": "/tat-ca-khu-vuc/proxy-angola",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ag",
+      "destination": "/tat-ca-khu-vuc/proxy-antigua",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/antigua-and-barbuda",
+      "destination": "/tat-ca-khu-vuc/proxy-antigua",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ar",
+      "destination": "/tat-ca-khu-vuc/proxy-argentina",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/argentina",
+      "destination": "/tat-ca-khu-vuc/proxy-argentina",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/am",
+      "destination": "/tat-ca-khu-vuc/proxy-armenia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/armenia",
+      "destination": "/tat-ca-khu-vuc/proxy-armenia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/at",
+      "destination": "/tat-ca-khu-vuc/proxy-ao",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/austria",
+      "destination": "/tat-ca-khu-vuc/proxy-ao",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/az",
+      "destination": "/tat-ca-khu-vuc/proxy-azerbaijan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/azerbaijan",
+      "destination": "/tat-ca-khu-vuc/proxy-azerbaijan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bs",
+      "destination": "/tat-ca-khu-vuc/proxy-bahamas",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bahamas",
+      "destination": "/tat-ca-khu-vuc/proxy-bahamas",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bh",
+      "destination": "/tat-ca-khu-vuc/proxy-bahrain",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bahrain",
+      "destination": "/tat-ca-khu-vuc/proxy-bahrain",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bb",
+      "destination": "/tat-ca-khu-vuc/proxy-barbados",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/barbados",
+      "destination": "/tat-ca-khu-vuc/proxy-barbados",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/by",
+      "destination": "/tat-ca-khu-vuc/proxy-belarus",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/belarus",
+      "destination": "/tat-ca-khu-vuc/proxy-belarus",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/be",
+      "destination": "/tat-ca-khu-vuc/proxy-bi",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/belgium",
+      "destination": "/tat-ca-khu-vuc/proxy-bi",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bz",
+      "destination": "/tat-ca-khu-vuc/proxy-belize",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/belize",
+      "destination": "/tat-ca-khu-vuc/proxy-belize",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bj",
+      "destination": "/tat-ca-khu-vuc/proxy-benin",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/benin",
+      "destination": "/tat-ca-khu-vuc/proxy-benin",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bt",
+      "destination": "/tat-ca-khu-vuc/proxy-bhutan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bhutan",
+      "destination": "/tat-ca-khu-vuc/proxy-bhutan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bo",
+      "destination": "/tat-ca-khu-vuc/proxy-bolivia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bolivia",
+      "destination": "/tat-ca-khu-vuc/proxy-bolivia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ba",
+      "destination": "/tat-ca-khu-vuc/proxy-bosnia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bosnia-and-herzegovina",
+      "destination": "/tat-ca-khu-vuc/proxy-bosnia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bw",
+      "destination": "/tat-ca-khu-vuc/proxy-botswana",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/botswana",
+      "destination": "/tat-ca-khu-vuc/proxy-botswana",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/br",
+      "destination": "/tat-ca-khu-vuc/proxy-brazil",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/brazil",
+      "destination": "/tat-ca-khu-vuc/proxy-brazil",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bn",
+      "destination": "/tat-ca-khu-vuc/proxy-brunei",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/brunei",
+      "destination": "/tat-ca-khu-vuc/proxy-brunei",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bg",
+      "destination": "/tat-ca-khu-vuc/proxy-bulgaria",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bulgaria",
+      "destination": "/tat-ca-khu-vuc/proxy-bulgaria",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bf",
+      "destination": "/tat-ca-khu-vuc/proxy-burkina-faso",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/burkina-faso",
+      "destination": "/tat-ca-khu-vuc/proxy-burkina-faso",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/bi",
+      "destination": "/tat-ca-khu-vuc/proxy-burundi",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/burundi",
+      "destination": "/tat-ca-khu-vuc/proxy-burundi",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kh",
+      "destination": "/tat-ca-khu-vuc/proxy-campuchia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cambodia",
+      "destination": "/tat-ca-khu-vuc/proxy-campuchia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cm",
+      "destination": "/tat-ca-khu-vuc/proxy-cameroon",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cameroon",
+      "destination": "/tat-ca-khu-vuc/proxy-cameroon",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cv",
+      "destination": "/tat-ca-khu-vuc/proxy-cape-verde",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cape-verde",
+      "destination": "/tat-ca-khu-vuc/proxy-cape-verde",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cf",
+      "destination": "/tat-ca-khu-vuc/proxy-car",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/central-african-republic",
+      "destination": "/tat-ca-khu-vuc/proxy-car",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/td",
+      "destination": "/tat-ca-khu-vuc/proxy-chad",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/chad",
+      "destination": "/tat-ca-khu-vuc/proxy-chad",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cl",
+      "destination": "/tat-ca-khu-vuc/proxy-chile",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/chile",
+      "destination": "/tat-ca-khu-vuc/proxy-chile",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cn",
+      "destination": "/tat-ca-khu-vuc/proxy-trung-quoc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/china",
+      "destination": "/tat-ca-khu-vuc/proxy-trung-quoc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/co",
+      "destination": "/tat-ca-khu-vuc/proxy-colombia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/colombia",
+      "destination": "/tat-ca-khu-vuc/proxy-colombia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/km",
+      "destination": "/tat-ca-khu-vuc/proxy-comoros",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/comoros",
+      "destination": "/tat-ca-khu-vuc/proxy-comoros",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cg",
+      "destination": "/tat-ca-khu-vuc/proxy-congo",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/congo",
+      "destination": "/tat-ca-khu-vuc/proxy-congo",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cr",
+      "destination": "/tat-ca-khu-vuc/proxy-costa-rica",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/costa-rica",
+      "destination": "/tat-ca-khu-vuc/proxy-costa-rica",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ci",
+      "destination": "/tat-ca-khu-vuc/proxy-bo-bien-nga",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cote-d-ivoire",
+      "destination": "/tat-ca-khu-vuc/proxy-bo-bien-nga",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/hr",
+      "destination": "/tat-ca-khu-vuc/proxy-croatia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/croatia",
+      "destination": "/tat-ca-khu-vuc/proxy-croatia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cu",
+      "destination": "/tat-ca-khu-vuc/proxy-cuba",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cuba",
+      "destination": "/tat-ca-khu-vuc/proxy-cuba",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cy",
+      "destination": "/tat-ca-khu-vuc/proxy-sip",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cyprus",
+      "destination": "/tat-ca-khu-vuc/proxy-sip",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cz",
+      "destination": "/tat-ca-khu-vuc/proxy-sec",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/czech-republic",
+      "destination": "/tat-ca-khu-vuc/proxy-sec",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/dk",
+      "destination": "/tat-ca-khu-vuc/proxy-dan-mach",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/denmark",
+      "destination": "/tat-ca-khu-vuc/proxy-dan-mach",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/dj",
+      "destination": "/tat-ca-khu-vuc/proxy-djibouti",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/djibouti",
+      "destination": "/tat-ca-khu-vuc/proxy-djibouti",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/dm",
+      "destination": "/tat-ca-khu-vuc/proxy-dominica",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/dominica",
+      "destination": "/tat-ca-khu-vuc/proxy-dominica",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/do",
+      "destination": "/tat-ca-khu-vuc/proxy-dominica-ch",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/dominican-republic",
+      "destination": "/tat-ca-khu-vuc/proxy-dominica-ch",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/cd",
+      "destination": "/tat-ca-khu-vuc/proxy-congo-drc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/dr-congo",
+      "destination": "/tat-ca-khu-vuc/proxy-congo-drc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ec",
+      "destination": "/tat-ca-khu-vuc/proxy-ecuador",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ecuador",
+      "destination": "/tat-ca-khu-vuc/proxy-ecuador",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/eg",
+      "destination": "/tat-ca-khu-vuc/proxy-ai-cap",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/egypt",
+      "destination": "/tat-ca-khu-vuc/proxy-ai-cap",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sv",
+      "destination": "/tat-ca-khu-vuc/proxy-el-salvador",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/el-salvador",
+      "destination": "/tat-ca-khu-vuc/proxy-el-salvador",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gq",
+      "destination": "/tat-ca-khu-vuc/proxy-equatorial-guinea",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/equatorial-guinea",
+      "destination": "/tat-ca-khu-vuc/proxy-equatorial-guinea",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/er",
+      "destination": "/tat-ca-khu-vuc/proxy-eritrea",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/eritrea",
+      "destination": "/tat-ca-khu-vuc/proxy-eritrea",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ee",
+      "destination": "/tat-ca-khu-vuc/proxy-estonia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/estonia",
+      "destination": "/tat-ca-khu-vuc/proxy-estonia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sz",
+      "destination": "/tat-ca-khu-vuc/proxy-eswatini",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/eswatini",
+      "destination": "/tat-ca-khu-vuc/proxy-eswatini",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/et",
+      "destination": "/tat-ca-khu-vuc/proxy-ethiopia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ethiopia",
+      "destination": "/tat-ca-khu-vuc/proxy-ethiopia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/fj",
+      "destination": "/tat-ca-khu-vuc/proxy-fiji",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/fiji",
+      "destination": "/tat-ca-khu-vuc/proxy-fiji",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/fi",
+      "destination": "/tat-ca-khu-vuc/proxy-phan-lan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/finland",
+      "destination": "/tat-ca-khu-vuc/proxy-phan-lan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ga",
+      "destination": "/tat-ca-khu-vuc/proxy-gabon",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gabon",
+      "destination": "/tat-ca-khu-vuc/proxy-gabon",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gm",
+      "destination": "/tat-ca-khu-vuc/proxy-gambia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gambia",
+      "destination": "/tat-ca-khu-vuc/proxy-gambia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ge",
+      "destination": "/tat-ca-khu-vuc/proxy-georgia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/georgia",
+      "destination": "/tat-ca-khu-vuc/proxy-georgia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gh",
+      "destination": "/tat-ca-khu-vuc/proxy-ghana",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ghana",
+      "destination": "/tat-ca-khu-vuc/proxy-ghana",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gi",
+      "destination": "/tat-ca-khu-vuc/proxy-gibraltar",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gibraltar",
+      "destination": "/tat-ca-khu-vuc/proxy-gibraltar",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gr",
+      "destination": "/tat-ca-khu-vuc/proxy-hy-lap",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/greece",
+      "destination": "/tat-ca-khu-vuc/proxy-hy-lap",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gd",
+      "destination": "/tat-ca-khu-vuc/proxy-grenada",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/grenada",
+      "destination": "/tat-ca-khu-vuc/proxy-grenada",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gt",
+      "destination": "/tat-ca-khu-vuc/proxy-guatemala",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/guatemala",
+      "destination": "/tat-ca-khu-vuc/proxy-guatemala",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gn",
+      "destination": "/tat-ca-khu-vuc/proxy-guinea",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/guinea",
+      "destination": "/tat-ca-khu-vuc/proxy-guinea",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gw",
+      "destination": "/tat-ca-khu-vuc/proxy-guinea-bissau",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/guinea-bissau",
+      "destination": "/tat-ca-khu-vuc/proxy-guinea-bissau",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/gy",
+      "destination": "/tat-ca-khu-vuc/proxy-guyana",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/guyana",
+      "destination": "/tat-ca-khu-vuc/proxy-guyana",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ht",
+      "destination": "/tat-ca-khu-vuc/proxy-haiti",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/haiti",
+      "destination": "/tat-ca-khu-vuc/proxy-haiti",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/hn",
+      "destination": "/tat-ca-khu-vuc/proxy-honduras",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/honduras",
+      "destination": "/tat-ca-khu-vuc/proxy-honduras",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/hu",
+      "destination": "/tat-ca-khu-vuc/proxy-hungary",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/hungary",
+      "destination": "/tat-ca-khu-vuc/proxy-hungary",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/is",
+      "destination": "/tat-ca-khu-vuc/proxy-iceland",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/iceland",
+      "destination": "/tat-ca-khu-vuc/proxy-iceland",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ir",
+      "destination": "/tat-ca-khu-vuc/proxy-iran",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/iran",
+      "destination": "/tat-ca-khu-vuc/proxy-iran",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/iq",
+      "destination": "/tat-ca-khu-vuc/proxy-iraq",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/iraq",
+      "destination": "/tat-ca-khu-vuc/proxy-iraq",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ie",
+      "destination": "/tat-ca-khu-vuc/proxy-ireland",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ireland",
+      "destination": "/tat-ca-khu-vuc/proxy-ireland",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/im",
+      "destination": "/tat-ca-khu-vuc/proxy-isle-of-man",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/isle-of-man",
+      "destination": "/tat-ca-khu-vuc/proxy-isle-of-man",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/il",
+      "destination": "/tat-ca-khu-vuc/proxy-israel",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/israel",
+      "destination": "/tat-ca-khu-vuc/proxy-israel",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/it",
+      "destination": "/tat-ca-khu-vuc/proxy-y",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/italy",
+      "destination": "/tat-ca-khu-vuc/proxy-y",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/jm",
+      "destination": "/tat-ca-khu-vuc/proxy-jamaica",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/jamaica",
+      "destination": "/tat-ca-khu-vuc/proxy-jamaica",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/jo",
+      "destination": "/tat-ca-khu-vuc/proxy-jordan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/jordan",
+      "destination": "/tat-ca-khu-vuc/proxy-jordan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kz",
+      "destination": "/tat-ca-khu-vuc/proxy-kazakhstan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kazakhstan",
+      "destination": "/tat-ca-khu-vuc/proxy-kazakhstan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ke",
+      "destination": "/tat-ca-khu-vuc/proxy-kenya",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kenya",
+      "destination": "/tat-ca-khu-vuc/proxy-kenya",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/xk",
+      "destination": "/tat-ca-khu-vuc/proxy-kosovo",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kosovo",
+      "destination": "/tat-ca-khu-vuc/proxy-kosovo",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kw",
+      "destination": "/tat-ca-khu-vuc/proxy-kuwait",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kuwait",
+      "destination": "/tat-ca-khu-vuc/proxy-kuwait",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kg",
+      "destination": "/tat-ca-khu-vuc/proxy-kyrgyzstan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kyrgyzstan",
+      "destination": "/tat-ca-khu-vuc/proxy-kyrgyzstan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/la",
+      "destination": "/tat-ca-khu-vuc/proxy-lao",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/laos",
+      "destination": "/tat-ca-khu-vuc/proxy-lao",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lv",
+      "destination": "/tat-ca-khu-vuc/proxy-latvia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/latvia",
+      "destination": "/tat-ca-khu-vuc/proxy-latvia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lb",
+      "destination": "/tat-ca-khu-vuc/proxy-lebanon",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lebanon",
+      "destination": "/tat-ca-khu-vuc/proxy-lebanon",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ls",
+      "destination": "/tat-ca-khu-vuc/proxy-lesotho",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lesotho",
+      "destination": "/tat-ca-khu-vuc/proxy-lesotho",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lr",
+      "destination": "/tat-ca-khu-vuc/proxy-liberia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/liberia",
+      "destination": "/tat-ca-khu-vuc/proxy-liberia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ly",
+      "destination": "/tat-ca-khu-vuc/proxy-libya",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/libya",
+      "destination": "/tat-ca-khu-vuc/proxy-libya",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/li",
+      "destination": "/tat-ca-khu-vuc/proxy-liechtenstein",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/liechtenstein",
+      "destination": "/tat-ca-khu-vuc/proxy-liechtenstein",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lt",
+      "destination": "/tat-ca-khu-vuc/proxy-lithuania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lithuania",
+      "destination": "/tat-ca-khu-vuc/proxy-lithuania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lu",
+      "destination": "/tat-ca-khu-vuc/proxy-luxembourg",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/luxembourg",
+      "destination": "/tat-ca-khu-vuc/proxy-luxembourg",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mo",
+      "destination": "/tat-ca-khu-vuc/proxy-macao",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/macao",
+      "destination": "/tat-ca-khu-vuc/proxy-macao",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mg",
+      "destination": "/tat-ca-khu-vuc/proxy-madagascar",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/madagascar",
+      "destination": "/tat-ca-khu-vuc/proxy-madagascar",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mw",
+      "destination": "/tat-ca-khu-vuc/proxy-malawi",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/malawi",
+      "destination": "/tat-ca-khu-vuc/proxy-malawi",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/my",
+      "destination": "/tat-ca-khu-vuc/proxy-malaysia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/malaysia",
+      "destination": "/tat-ca-khu-vuc/proxy-malaysia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mv",
+      "destination": "/tat-ca-khu-vuc/proxy-maldives",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/maldives",
+      "destination": "/tat-ca-khu-vuc/proxy-maldives",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ml",
+      "destination": "/tat-ca-khu-vuc/proxy-mali",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mali",
+      "destination": "/tat-ca-khu-vuc/proxy-mali",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mt",
+      "destination": "/tat-ca-khu-vuc/proxy-malta",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/malta",
+      "destination": "/tat-ca-khu-vuc/proxy-malta",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mr",
+      "destination": "/tat-ca-khu-vuc/proxy-mauritania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mauritania",
+      "destination": "/tat-ca-khu-vuc/proxy-mauritania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mu",
+      "destination": "/tat-ca-khu-vuc/proxy-mauritius",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mauritius",
+      "destination": "/tat-ca-khu-vuc/proxy-mauritius",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mx",
+      "destination": "/tat-ca-khu-vuc/proxy-mexico",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mexico",
+      "destination": "/tat-ca-khu-vuc/proxy-mexico",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/md",
+      "destination": "/tat-ca-khu-vuc/proxy-moldova",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/moldova",
+      "destination": "/tat-ca-khu-vuc/proxy-moldova",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mc",
+      "destination": "/tat-ca-khu-vuc/proxy-monaco",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/monaco",
+      "destination": "/tat-ca-khu-vuc/proxy-monaco",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mn",
+      "destination": "/tat-ca-khu-vuc/proxy-mong-co",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mongolia",
+      "destination": "/tat-ca-khu-vuc/proxy-mong-co",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/me",
+      "destination": "/tat-ca-khu-vuc/proxy-montenegro",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/montenegro",
+      "destination": "/tat-ca-khu-vuc/proxy-montenegro",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ma",
+      "destination": "/tat-ca-khu-vuc/proxy-morocco",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/morocco",
+      "destination": "/tat-ca-khu-vuc/proxy-morocco",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mz",
+      "destination": "/tat-ca-khu-vuc/proxy-mozambique",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mozambique",
+      "destination": "/tat-ca-khu-vuc/proxy-mozambique",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mm",
+      "destination": "/tat-ca-khu-vuc/proxy-myanmar",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/myanmar",
+      "destination": "/tat-ca-khu-vuc/proxy-myanmar",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/na",
+      "destination": "/tat-ca-khu-vuc/proxy-namibia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/namibia",
+      "destination": "/tat-ca-khu-vuc/proxy-namibia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/np",
+      "destination": "/tat-ca-khu-vuc/proxy-nepal",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/nepal",
+      "destination": "/tat-ca-khu-vuc/proxy-nepal",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/nl",
+      "destination": "/tat-ca-khu-vuc/proxy-ha-lan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/netherlands",
+      "destination": "/tat-ca-khu-vuc/proxy-ha-lan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/nz",
+      "destination": "/tat-ca-khu-vuc/proxy-new-zealand",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/new-zealand",
+      "destination": "/tat-ca-khu-vuc/proxy-new-zealand",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ni",
+      "destination": "/tat-ca-khu-vuc/proxy-nicaragua",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/nicaragua",
+      "destination": "/tat-ca-khu-vuc/proxy-nicaragua",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ne",
+      "destination": "/tat-ca-khu-vuc/proxy-niger",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/niger",
+      "destination": "/tat-ca-khu-vuc/proxy-niger",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ng",
+      "destination": "/tat-ca-khu-vuc/proxy-nigeria",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/nigeria",
+      "destination": "/tat-ca-khu-vuc/proxy-nigeria",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kp",
+      "destination": "/tat-ca-khu-vuc/proxy-trieu-tien",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/north-korea",
+      "destination": "/tat-ca-khu-vuc/proxy-trieu-tien",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/mk",
+      "destination": "/tat-ca-khu-vuc/proxy-bac-macedonia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/north-macedonia",
+      "destination": "/tat-ca-khu-vuc/proxy-bac-macedonia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/no",
+      "destination": "/tat-ca-khu-vuc/proxy-na-uy",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/norway",
+      "destination": "/tat-ca-khu-vuc/proxy-na-uy",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/om",
+      "destination": "/tat-ca-khu-vuc/proxy-oman",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/oman",
+      "destination": "/tat-ca-khu-vuc/proxy-oman",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/pk",
+      "destination": "/tat-ca-khu-vuc/proxy-pakistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/pakistan",
+      "destination": "/tat-ca-khu-vuc/proxy-pakistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ps",
+      "destination": "/tat-ca-khu-vuc/proxy-palestine",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/palestine",
+      "destination": "/tat-ca-khu-vuc/proxy-palestine",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/pa",
+      "destination": "/tat-ca-khu-vuc/proxy-panama",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/panama",
+      "destination": "/tat-ca-khu-vuc/proxy-panama",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/pg",
+      "destination": "/tat-ca-khu-vuc/proxy-papua-new-guinea",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/papua-new-guinea",
+      "destination": "/tat-ca-khu-vuc/proxy-papua-new-guinea",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/py",
+      "destination": "/tat-ca-khu-vuc/proxy-paraguay",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/paraguay",
+      "destination": "/tat-ca-khu-vuc/proxy-paraguay",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/pe",
+      "destination": "/tat-ca-khu-vuc/proxy-peru",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/peru",
+      "destination": "/tat-ca-khu-vuc/proxy-peru",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ph",
+      "destination": "/tat-ca-khu-vuc/proxy-philippines",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/philippines",
+      "destination": "/tat-ca-khu-vuc/proxy-philippines",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/pl",
+      "destination": "/tat-ca-khu-vuc/proxy-ba-lan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/poland",
+      "destination": "/tat-ca-khu-vuc/proxy-ba-lan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/pt",
+      "destination": "/tat-ca-khu-vuc/proxy-bo-dao-nha",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/portugal",
+      "destination": "/tat-ca-khu-vuc/proxy-bo-dao-nha",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/pr",
+      "destination": "/tat-ca-khu-vuc/proxy-puerto-rico",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/puerto-rico",
+      "destination": "/tat-ca-khu-vuc/proxy-puerto-rico",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/qa",
+      "destination": "/tat-ca-khu-vuc/proxy-qatar",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/qatar",
+      "destination": "/tat-ca-khu-vuc/proxy-qatar",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ro",
+      "destination": "/tat-ca-khu-vuc/proxy-romania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/romania",
+      "destination": "/tat-ca-khu-vuc/proxy-romania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ru",
+      "destination": "/tat-ca-khu-vuc/proxy-nga",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/russia",
+      "destination": "/tat-ca-khu-vuc/proxy-nga",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/rw",
+      "destination": "/tat-ca-khu-vuc/proxy-rwanda",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/rwanda",
+      "destination": "/tat-ca-khu-vuc/proxy-rwanda",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kn",
+      "destination": "/tat-ca-khu-vuc/proxy-saint-kitts",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/saint-kitts-and-nevis",
+      "destination": "/tat-ca-khu-vuc/proxy-saint-kitts",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lc",
+      "destination": "/tat-ca-khu-vuc/proxy-saint-lucia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/saint-lucia",
+      "destination": "/tat-ca-khu-vuc/proxy-saint-lucia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/vc",
+      "destination": "/tat-ca-khu-vuc/proxy-saint-vincent",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/saint-vincent",
+      "destination": "/tat-ca-khu-vuc/proxy-saint-vincent",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sm",
+      "destination": "/tat-ca-khu-vuc/proxy-san-marino",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/san-marino",
+      "destination": "/tat-ca-khu-vuc/proxy-san-marino",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sa",
+      "destination": "/tat-ca-khu-vuc/proxy-a-rap-xe-ut",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/saudi-arabia",
+      "destination": "/tat-ca-khu-vuc/proxy-a-rap-xe-ut",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sn",
+      "destination": "/tat-ca-khu-vuc/proxy-senegal",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/senegal",
+      "destination": "/tat-ca-khu-vuc/proxy-senegal",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/rs",
+      "destination": "/tat-ca-khu-vuc/proxy-serbia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/serbia",
+      "destination": "/tat-ca-khu-vuc/proxy-serbia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sc",
+      "destination": "/tat-ca-khu-vuc/proxy-seychelles",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/seychelles",
+      "destination": "/tat-ca-khu-vuc/proxy-seychelles",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sl",
+      "destination": "/tat-ca-khu-vuc/proxy-sierra-leone",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sierra-leone",
+      "destination": "/tat-ca-khu-vuc/proxy-sierra-leone",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sg",
+      "destination": "/tat-ca-khu-vuc/proxy-singapore",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/singapore",
+      "destination": "/tat-ca-khu-vuc/proxy-singapore",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sk",
+      "destination": "/tat-ca-khu-vuc/proxy-slovakia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/slovakia",
+      "destination": "/tat-ca-khu-vuc/proxy-slovakia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/si",
+      "destination": "/tat-ca-khu-vuc/proxy-slovenia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/slovenia",
+      "destination": "/tat-ca-khu-vuc/proxy-slovenia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/so",
+      "destination": "/tat-ca-khu-vuc/proxy-somalia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/somalia",
+      "destination": "/tat-ca-khu-vuc/proxy-somalia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/za",
+      "destination": "/tat-ca-khu-vuc/proxy-nam-phi",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/south-africa",
+      "destination": "/tat-ca-khu-vuc/proxy-nam-phi",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/kr",
+      "destination": "/tat-ca-khu-vuc/proxy-han-quoc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/south-korea",
+      "destination": "/tat-ca-khu-vuc/proxy-han-quoc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ss",
+      "destination": "/tat-ca-khu-vuc/proxy-nam-sudan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/south-sudan",
+      "destination": "/tat-ca-khu-vuc/proxy-nam-sudan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/es",
+      "destination": "/tat-ca-khu-vuc/proxy-tay-ban-nha",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/spain",
+      "destination": "/tat-ca-khu-vuc/proxy-tay-ban-nha",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/lk",
+      "destination": "/tat-ca-khu-vuc/proxy-sri-lanka",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sri-lanka",
+      "destination": "/tat-ca-khu-vuc/proxy-sri-lanka",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sd",
+      "destination": "/tat-ca-khu-vuc/proxy-sudan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sudan",
+      "destination": "/tat-ca-khu-vuc/proxy-sudan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sr",
+      "destination": "/tat-ca-khu-vuc/proxy-suriname",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/suriname",
+      "destination": "/tat-ca-khu-vuc/proxy-suriname",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/se",
+      "destination": "/tat-ca-khu-vuc/proxy-thuy-dien",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sweden",
+      "destination": "/tat-ca-khu-vuc/proxy-thuy-dien",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ch",
+      "destination": "/tat-ca-khu-vuc/proxy-thuy-si",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/switzerland",
+      "destination": "/tat-ca-khu-vuc/proxy-thuy-si",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/sy",
+      "destination": "/tat-ca-khu-vuc/proxy-syria",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/syria",
+      "destination": "/tat-ca-khu-vuc/proxy-syria",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tw",
+      "destination": "/tat-ca-khu-vuc/proxy-dai-loan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/taiwan",
+      "destination": "/tat-ca-khu-vuc/proxy-dai-loan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tj",
+      "destination": "/tat-ca-khu-vuc/proxy-tajikistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tajikistan",
+      "destination": "/tat-ca-khu-vuc/proxy-tajikistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tz",
+      "destination": "/tat-ca-khu-vuc/proxy-tanzania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tanzania",
+      "destination": "/tat-ca-khu-vuc/proxy-tanzania",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/th",
+      "destination": "/tat-ca-khu-vuc/proxy-thai-lan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/thailand",
+      "destination": "/tat-ca-khu-vuc/proxy-thai-lan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tg",
+      "destination": "/tat-ca-khu-vuc/proxy-togo",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/togo",
+      "destination": "/tat-ca-khu-vuc/proxy-togo",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tt",
+      "destination": "/tat-ca-khu-vuc/proxy-trinidad",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/trinidad-and-tobago",
+      "destination": "/tat-ca-khu-vuc/proxy-trinidad",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tn",
+      "destination": "/tat-ca-khu-vuc/proxy-tunisia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tunisia",
+      "destination": "/tat-ca-khu-vuc/proxy-tunisia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tr",
+      "destination": "/tat-ca-khu-vuc/proxy-tho-nhi-ky",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/turkey",
+      "destination": "/tat-ca-khu-vuc/proxy-tho-nhi-ky",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/tm",
+      "destination": "/tat-ca-khu-vuc/proxy-turkmenistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/turkmenistan",
+      "destination": "/tat-ca-khu-vuc/proxy-turkmenistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ug",
+      "destination": "/tat-ca-khu-vuc/proxy-uganda",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/uganda",
+      "destination": "/tat-ca-khu-vuc/proxy-uganda",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ua",
+      "destination": "/tat-ca-khu-vuc/proxy-ukraine",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ukraine",
+      "destination": "/tat-ca-khu-vuc/proxy-ukraine",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/uy",
+      "destination": "/tat-ca-khu-vuc/proxy-uruguay",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/uruguay",
+      "destination": "/tat-ca-khu-vuc/proxy-uruguay",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/uz",
+      "destination": "/tat-ca-khu-vuc/proxy-uzbekistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/uzbekistan",
+      "destination": "/tat-ca-khu-vuc/proxy-uzbekistan",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/va",
+      "destination": "/tat-ca-khu-vuc/proxy-vatican",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/vatican-city",
+      "destination": "/tat-ca-khu-vuc/proxy-vatican",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ve",
+      "destination": "/tat-ca-khu-vuc/proxy-venezuela",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/venezuela",
+      "destination": "/tat-ca-khu-vuc/proxy-venezuela",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/vn",
+      "destination": "/tat-ca-khu-vuc/proxy-viet-nam",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/vietnam",
+      "destination": "/tat-ca-khu-vuc/proxy-viet-nam",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/ye",
+      "destination": "/tat-ca-khu-vuc/proxy-yemen",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/yemen",
+      "destination": "/tat-ca-khu-vuc/proxy-yemen",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/zm",
+      "destination": "/tat-ca-khu-vuc/proxy-zambia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/zambia",
+      "destination": "/tat-ca-khu-vuc/proxy-zambia",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/zw",
+      "destination": "/tat-ca-khu-vuc/proxy-zimbabwe",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-khu-vuc/zimbabwe",
+      "destination": "/tat-ca-khu-vuc/proxy-zimbabwe",
+      "permanent": true
+    },
+    {
+      "source": "/tin-nhan/vuammo",
+      "destination": "/tin-nhan/vuaproxy",
+      "permanent": false
+    },
+    {
+      "source": "/cart",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/wishlist",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-san-pham",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-san-pham/proxy",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-san-pham/proxy/:path*",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-san-pham/tai-khoan-cong-cu-ai",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-san-pham/tai-khoan-cong-cu-ai/:path*",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-san-pham/game",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
+      "source": "/tat-ca-san-pham/khoa-hoc",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
+      "source": "/khu-vuc",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
+      "source": "/khu-vuc/:path*",
+      "destination": "/tat-ca-khu-vuc",
+      "permanent": true
+    },
+    {
       "source": "/vi/tat-ca-san-pham/:slug.html",
       "destination": "/tat-ca-san-pham/:slug",
       "permanent": true
@@ -62,26 +2022,20 @@
       "source": "/vi/danh-sach-chia-se/:path*",
       "destination": "/danh-sach-chia-se/:path*",
       "permanent": true
-    },
-    {
-      "source": "/vi/danh-sach-shop",
-      "destination": "/danh-sach-shop",
-      "permanent": true
-    },
-    {
-      "source": "/vi/danh-sach-shop/:path*",
-      "destination": "/danh-sach-shop/:path*",
-      "permanent": true
     }
   ],
   "rewrites": [
     {
+      "source": "/tat-ca-khu-vuc/:slug",
+      "destination": "/khu-vuc-quoc-gia"
+    },
+    {
       "source": "/api/:path*",
-      "destination": "http://187.52.116.85/api/:path*"
+      "destination": "http://187.127.207.14/vuaproxy-api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "http://187.52.116.85/uploads/:path*"
+      "destination": "http://187.127.207.14/vuaproxy-uploads/:path*"
     },
     {
       "source": "/tat-ca-san-pham/:parent/:child",
@@ -89,7 +2043,7 @@
     },
     {
       "source": "/tat-ca-san-pham/:slug(.*-[0-9]+)",
-      "destination": "/vi/tat-ca-san-pham/:slug"
+      "destination": "/product.html"
     },
     {
       "source": "/tat-ca-san-pham/:parent",
@@ -97,7 +2051,7 @@
     },
     {
       "source": "/chia-se/:slug",
-      "destination": "/vi/chia-se/:slug"
+      "destination": "/chia-se-bai"
     },
     {
       "source": "/danh-sach-san-pham",
@@ -110,18 +2064,6 @@
     {
       "source": "/danh-sach-san-pham/trang-:n",
       "destination": "/vi/danh-sach-san-pham/trang-:n"
-    },
-    {
-      "source": "/danh-sach-shop/trang-:n",
-      "destination": "/vi/danh-sach-shop/trang-:n"
-    },
-    {
-      "source": "/danh-sach-shop/",
-      "destination": "/vi/danh-sach-shop"
-    },
-    {
-      "source": "/danh-sach-shop",
-      "destination": "/vi/danh-sach-shop"
     },
     {
       "source": "/danh-sach-chia-se/trang-:n",
@@ -168,13 +2110,27 @@
         }
       ],
       "destination": "/admin.html"
-    },
-    {
-      "source": "/:slug([a-z0-9][a-z0-9-]{0,62})",
-      "destination": "/shop?slug=:slug"
     }
   ],
   "headers": [
+    {
+      "source": "/favicon.png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/favicon.ico",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
     {
       "source": "/(.*)\\.(js|css|png|jpg|jpeg|webp|svg|ico|woff2)",
       "headers": [
