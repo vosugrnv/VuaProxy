@@ -2,13 +2,16 @@ const crypto = require("crypto");
 const config = require("./config");
 const { query, withTransaction } = require("./db");
 const stock = require("./stock");
+const octoprox = require("./octoprox");
+const vpnPool = require("./vpn-pool");
 
 function attach(ordersCore) {
   const {
     normalizeItems,
     enrichItemsSeller,
     allocPublicCode,
-    formatOrder
+    formatOrder,
+    computeHoldUntil
   } = ordersCore;
 
   async function fulfillQrPaidOrder(client, orderRow, meta = {}) {
@@ -24,35 +27,55 @@ function attach(ordersCore) {
     }
     items = await enrichItemsSeller(client, items);
 
+    await vpnPool.ready();
     for (const it of items) {
+      const stockId = stock.resolveStockProductId(it);
+      if (
+        vpnPool.handlesItem(it) ||
+        octoprox.handlesItem(it) ||
+        stock.isManualFulfillment(stockId) ||
+        stock.isLocationProxyItem(it)
+      ) {
+        continue;
+      }
       const c = await client.query(
         `SELECT COUNT(*)::int AS n FROM stock_items
          WHERE product_id = $1 AND status = 'available'`,
-        [String(it.id)]
+        [stockId]
       );
       if ((c.rows[0]?.n || 0) < it.qty) {
         const err = new Error(
-          `Tạm hết hàng khi thanh toán: ${it.name} (mã #${it.id}).`
+          `Tạm hết hàng khi thanh toán: ${it.name} (mã #${stockId}).`
         );
         err.status = 409;
         throw err;
       }
     }
 
-    const holdUntil = new Date(Date.now() + config.holdDays * 24 * 60 * 60 * 1000);
-    const delivered = await stock.allocateForItems(client, orderRow.id, items);
+    const holdUntil = typeof computeHoldUntil === "function"
+      ? computeHoldUntil(items)
+      : new Date(Date.now() + require("./config").holdDays * 24 * 60 * 60 * 1000);
+    const ordersMod = require("./orders");
+    const deliveredResult = await ordersMod.deliverOrderItems(client, orderRow, items, {
+      publicCode: orderRow.public_code
+    });
+    const delivered = deliveredResult.delivered;
     const discount = Number(orderRow.discount_cents || 0);
     const promoCode = orderRow.promo_code || "";
     const noteLines = delivered
       .map((d) => d.name + " ×" + d.qty + ":\n" + d.lines.join("\n"))
       .join("\n\n");
     const fullNote =
-      "Giao tự động từ kho Vua MMO (thanh toán QR).\n\n" +
+      ordersMod.deliveryIntro(
+        deliveredResult.fromPool ? "pool" : deliveredResult.projectId ? "octoprox" : "",
+        "qr"
+      ) +
+      "\n\n" +
       noteLines +
       (promoCode
         ? "\n\nĐã áp dụng mã " + promoCode + " (−" + discount.toLocaleString("vi-VN") + "₫)."
         : "") +
-      "\n\nTiền được giữ bảo vệ đến " +
+      "\n\nĐơn còn hiệu lực / khiếu nại đến " +
       holdUntil.toISOString().slice(0, 10) +
       ".";
 
@@ -61,9 +84,16 @@ function attach(ordersCore) {
        SET status = 'delivered',
            delivery_payload = $1::jsonb,
            delivery_note = $2,
-           hold_until = $3
+           hold_until = $3,
+           octoprox_project_id = COALESCE($5, octoprox_project_id)
        WHERE id = $4 AND status = 'pending_payment'`,
-      [JSON.stringify(delivered), fullNote, holdUntil.toISOString(), orderRow.id]
+      [
+        JSON.stringify(delivered),
+        fullNote,
+        holdUntil.toISOString(),
+        orderRow.id,
+        deliveredResult.projectId
+      ]
     );
 
     if (orderRow.promo_code && orderRow.buyer_id) {
@@ -80,7 +110,7 @@ function attach(ordersCore) {
       }
     }
 
-    return { already: false, delivered, fullNote, holdUntil, meta };
+    return { already: false, delivered, fullNote, holdUntil, meta, vpnStartIds: deliveredResult.vpnStartIds || [] };
   }
 
   async function createCheckoutQr(req, res) {
@@ -95,7 +125,7 @@ function attach(ordersCore) {
       }
       if (req.user?.id && (await cms.isUserBlacklisted(req.user.id))) {
         return res.status(403).json({
-          error: "Tài khoản nằm trong blacklist. Liên hệ hỗ trợ Vua MMO để được mở lại."
+          error: "Tài khoản nằm trong blacklist. Liên hệ hỗ trợ Vua Proxy để được mở lại."
         });
       }
       const parsed = normalizeItems(req.body.items);
@@ -116,21 +146,33 @@ function attach(ordersCore) {
       if (total < 1000) {
         return res.status(400).json({ error: "Đơn tối thiểu 1.000₫ để thanh toán QR" });
       }
-      const guestEmail = String(req.body.email || req.body.guestEmail || "")
-        .trim()
-        .slice(0, 120);
+      const ordersMod = require("./orders");
+      const guestEmail = await ordersMod.resolveDeliveryEmail(req, null);
+      if (!guestEmail) {
+        return res.status(400).json({ error: "Vui lòng nhập email nhận hàng hợp lệ" });
+      }
       const guestToken = crypto.randomBytes(24).toString("hex");
       const payExpire = new Date(Date.now() + 60 * 60 * 1000);
 
+      await vpnPool.ready();
       for (const it of items) {
+        const stockId = stock.resolveStockProductId(it);
+        if (
+          vpnPool.handlesItem(it) ||
+          octoprox.handlesItem(it) ||
+          stock.isManualFulfillment(stockId) ||
+          stock.isLocationProxyItem(it)
+        ) {
+          continue;
+        }
         const c = await query(
           `SELECT COUNT(*)::int AS n FROM stock_items
            WHERE product_id = $1 AND status = 'available'`,
-          [String(it.id)]
+          [stockId]
         );
         if ((c.rows[0]?.n || 0) < it.qty) {
           return res.status(409).json({
-            error: `Tạm hết hàng: ${it.name} (mã #${it.id}). Còn ${c.rows[0]?.n || 0}/${it.qty}.`
+            error: `Tạm hết hàng: ${it.name} (mã #${stockId}). Còn ${c.rows[0]?.n || 0}/${it.qty}.`
           });
         }
       }
@@ -153,7 +195,7 @@ function attach(ordersCore) {
 
       const payment = await wallet.createPaymentLink({
         amount: total,
-        description: "DH " + publicCode,
+        description: wallet.transferDescription(),
         returnUrl,
         cancelUrl,
         itemName:
@@ -196,21 +238,27 @@ function attach(ordersCore) {
       });
 
       if (payment.mock) {
+        let vpnStartIds = [];
         await withTransaction(async (client) => {
           const locked = await client.query(`SELECT * FROM orders WHERE id = $1 FOR UPDATE`, [
             order.id
           ]);
-          await fulfillQrPaidOrder(client, locked.rows[0], { mock: true });
+          const paid = await fulfillQrPaidOrder(client, locked.rows[0], { mock: true });
+          vpnStartIds = (paid && paid.vpnStartIds) || [];
         });
+        vpnPool.activate(vpnStartIds);
         const fresh = await query(
           `SELECT id, public_code, total_cents, status, delivery_note, delivery_payload, hold_until,
                   created_at, items_json, promo_code, discount_cents, subtotal_cents,
-                  guest_token, checkout_url, qr_code, payos_order_code
+                  guest_token, guest_email, buyer_id, checkout_url, qr_code, payos_order_code
            FROM orders WHERE id = $1`,
           [order.id]
         );
+        const emailResult = await require("./orders").notifyOrderDelivered(fresh.rows[0]);
         return res.json({
           order: formatOrder(fresh.rows[0]),
+          emailSent: emailResult.sent,
+          deliveryEmail: emailResult.to || guestEmail,
           payment: {
             status: "paid",
             checkoutUrl: payment.checkoutUrl,
@@ -234,7 +282,7 @@ function attach(ordersCore) {
     } catch (err) {
       console.error("createCheckoutQr", err);
       return res
-        .status(err.status || 500)
+        .status(err.status >= 400 && err.status < 600 ? err.status : 500)
         .json({ error: err.message || "Không tạo thanh toán QR được" });
     }
   }
@@ -253,6 +301,8 @@ function attach(ordersCore) {
       const order = r.rows[0];
       if (!order) return res.status(404).json({ error: "Không tìm thấy đơn" });
 
+      let emailSent = false;
+      let deliveryEmail = order.guest_email || "";
       if (order.status === "pending_payment") {
         const wallet = require("./wallet");
         const payos = wallet.getPayosClient();
@@ -263,13 +313,24 @@ function attach(ordersCore) {
             );
             const status = String(info.status || info.data?.status || "").toUpperCase();
             if (status === "PAID") {
+              let vpnStartIds = [];
               await withTransaction(async (client) => {
                 const locked = await client.query(
                   `SELECT * FROM orders WHERE id = $1 FOR UPDATE`,
                   [order.id]
                 );
-                await fulfillQrPaidOrder(client, locked.rows[0], { sync: true });
+                const paid = await fulfillQrPaidOrder(client, locked.rows[0], { sync: true });
+                vpnStartIds = (paid && paid.vpnStartIds) || [];
               });
+              vpnPool.activate(vpnStartIds);
+              const paidRow = await query(`SELECT * FROM orders WHERE id = $1`, [order.id]);
+              if (paidRow.rows[0]?.status === "delivered") {
+                const emailResult = await require("./orders").notifyOrderDelivered(
+                  paidRow.rows[0]
+                );
+                emailSent = emailResult.sent;
+                deliveryEmail = emailResult.to || deliveryEmail;
+              }
             }
           } catch (e) {
             console.warn("sync order pay", e.message);
@@ -281,6 +342,8 @@ function attach(ordersCore) {
       const row = fresh.rows[0];
       return res.json({
         order: formatOrder(row),
+        emailSent,
+        deliveryEmail: deliveryEmail || row.guest_email || "",
         payment: {
           status: row.status === "pending_payment" ? "pending" : row.status,
           checkoutUrl: row.checkout_url || "",

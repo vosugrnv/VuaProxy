@@ -1,0 +1,24 @@
+name: deploy-wallet-fix
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Upload API + checkout JS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          set -euo pipefail
+          HOST="${VPS_HOST:-187.127.207.14}"
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 root@$HOST"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=20"
+          $SCP api/src/stock.js api/src/orders.js api/src/order-qr.js "root@$HOST:/var/www/vuaproxy-api/src/"
+          $SCP js/checkout-modal.js js/location-country-page.js "root@$HOST:/var/www/vuaproxy-web/js/" || true
+          $SSH 'pm2 restart vuaproxy-api --update-env && sleep 2 && curl -sS http://127.0.0.1:3101/health && echo && curl -sS http://127.0.0.1/vuaproxy-api/health && echo'

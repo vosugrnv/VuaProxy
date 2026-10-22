@@ -2,6 +2,8 @@ const crypto = require("crypto");
 const config = require("./config");
 const { query, withTransaction } = require("./db");
 const stock = require("./stock");
+const octoprox = require("./octoprox");
+const vpnPool = require("./vpn-pool");
 
 const ORDER_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -37,8 +39,10 @@ function normalizeItems(raw) {
     if (!name || !Number.isFinite(price) || price <= 0) return null;
     if (!id) return null;
     total += price * qty;
+    const productId = String(it.productId || it.product_id || "").trim();
     items.push({
       id,
+      productId: productId || undefined,
       name,
       qty,
       price,
@@ -46,10 +50,70 @@ function normalizeItems(raw) {
       seller: String(it.seller || "").trim(),
       sellerToken: String(it.sellerToken || it.seller_token || "").trim(),
       sellerSlug: String(it.sellerSlug || it.seller_slug || "").trim(),
-      parentId: String(it.parentId || it.parent_id || "").trim()
+      parentId: String(it.parentId || it.parent_id || "").trim(),
+      meta: String(it.meta || "").trim(),
+      countryCode: String(it.countryCode || it.country_code || "").trim() || undefined,
+      packageKey: String(it.packageKey || it.package_key || "").trim() || undefined,
+      days: Number(it.days) > 0 ? Math.min(3660, Math.round(Number(it.days))) : undefined
     });
   }
   return { items, total };
+}
+
+function parsePackageHoldDays(items) {
+  let maxDays = 0;
+  for (const it of items || []) {
+    if (it.days != null && Number(it.days) > 0) {
+      maxDays = Math.max(maxDays, Math.round(Number(it.days)));
+    }
+    const text = [it.meta, it.name, it.title].filter(Boolean).join(" ");
+    const m = String(text).match(/(\d+)\s*ngày/i) || String(text).match(/(\d+)\s*days?/i);
+    if (m) maxDays = Math.max(maxDays, Number(m[1]));
+  }
+  if (maxDays > 0) return Math.min(maxDays, 3660);
+  return Math.max(1, Number(config.holdDays) || 3);
+}
+
+function computeHoldUntil(items, fromDate) {
+  const days = parsePackageHoldDays(items);
+  const base = fromDate ? new Date(fromDate) : new Date();
+  return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function normalizeDeliveryEmail(raw) {
+  const email = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .slice(0, 120);
+  if (!email || !email.includes("@") || email.length < 5) return "";
+  return email;
+}
+
+async function resolveDeliveryEmail(req, client) {
+  let email = normalizeDeliveryEmail(req.body.email || req.body.guestEmail || req.body.deliveryEmail);
+  if (!email && req.user?.email) email = normalizeDeliveryEmail(req.user.email);
+  if (!email && req.user?.id && client) {
+    const u = await client.query(`SELECT email FROM users WHERE id = $1`, [req.user.id]);
+    email = normalizeDeliveryEmail(u.rows[0]?.email);
+  }
+  return email;
+}
+
+async function notifyOrderDelivered(orderRow) {
+  try {
+    const mail = require("./mail");
+    let to = normalizeDeliveryEmail(orderRow.guest_email);
+    if (!to && orderRow.buyer_id) {
+      const u = await query(`SELECT email FROM users WHERE id = $1`, [orderRow.buyer_id]);
+      to = normalizeDeliveryEmail(u.rows[0]?.email);
+    }
+    if (!to) return { sent: false, reason: "no-email" };
+    const formatted = formatOrder(orderRow);
+    return await mail.sendOrderConfirmation({ to, order: formatted });
+  } catch (err) {
+    console.warn("notifyOrderDelivered", err.message);
+    return { sent: false, reason: err.message };
+  }
 }
 
 async function enrichItemsSeller(client, items) {
@@ -79,12 +143,79 @@ async function enrichItemsSeller(client, items) {
   });
 }
 
+function deliveryIntro(kind, channel) {
+  const qr = channel === "qr";
+  if (kind === "pool") return "Proxy:";
+  if (kind === "octoprox") {
+    return qr
+      ? "Đã khởi tạo proxy trên Octoprox (thanh toán QR)."
+      : "Đã khởi tạo proxy trên Octoprox.";
+  }
+  return qr
+    ? "Giao tự động từ kho Vua Proxy (thanh toán QR)."
+    : "Giao tự động từ kho Vua Proxy.";
+}
+
+async function deliverOrderItems(client, orderRow, items, opts) {
+  opts = opts || {};
+  await vpnPool.ready();
+  const poolItems = items.filter((it) => vpnPool.handlesItem(it));
+  let rest = items.filter((it) => !vpnPool.handlesItem(it));
+  let allocated = { blocks: [], startIds: [] };
+  if (poolItems.length) {
+    try {
+      allocated = await vpnPool.allocate(client, orderRow.id, poolItems);
+    } catch (err) {
+      // Wallet/QR checkout: if VPN pool cannot fulfill, fall back to stock/manual.
+      if (opts.requireVpnPool || (opts.stockOptions && opts.stockOptions.requireRealStock)) {
+        throw err;
+      }
+      console.error("deliverOrderItems vpn-pool fallback", err.message);
+      rest = rest.concat(poolItems);
+      allocated = { blocks: [], startIds: [] };
+    }
+  }
+  const poolBlocks = allocated.blocks || [];
+  const proxyItems = rest.filter((it) => octoprox.handlesItem(it));
+  const stockItems = rest.filter((it) => !octoprox.handlesItem(it));
+  let provision = null;
+  if (proxyItems.length) {
+    try {
+      provision = await octoprox.provision({
+        publicCode: opts.publicCode || orderRow.public_code,
+        items: proxyItems,
+        existingProjectId: opts.existingProjectId || orderRow.octoprox_project_id || null,
+        namePrefix: opts.namePrefix || "order"
+      });
+    } catch (err) {
+      if (opts.requireVpnPool || (opts.stockOptions && opts.stockOptions.requireRealStock)) {
+        throw err;
+      }
+      console.error("deliverOrderItems octoprox fallback", err.message);
+      stockItems.push(...proxyItems);
+      provision = null;
+    }
+  }
+  const delivered = stockItems.length
+    ? await stock.allocateForItems(client, orderRow.id, stockItems, opts.stockOptions)
+    : [];
+  delivered.unshift(...poolBlocks);
+  if (provision) delivered.push(...provision.blocks);
+  return {
+    delivered,
+    projectId: provision ? provision.projectId : null,
+    fromPool: poolBlocks.length > 0,
+    vpnStartIds: allocated.startIds || []
+  };
+}
+
 async function createOrder(req, res) {
+  let oxProjectId = null;
   try {
     const cms = require("./cms");
     if (await cms.isUserBlacklisted(req.user.id)) {
       return res.status(403).json({
-        error: "Tài khoản nằm trong blacklist. Liên hệ hỗ trợ Vua MMO để được mở lại."
+        error: "Tài khoản nằm trong blacklist. Liên hệ hỗ trợ Vua Proxy để được mở lại."
       });
     }
     const parsed = normalizeItems(req.body.items);
@@ -104,10 +235,14 @@ async function createOrder(req, res) {
       promoId = applied.promo.id;
     }
     const total = Math.max(0, subtotal - discount);
-    const holdUntil = new Date(Date.now() + config.holdDays * 24 * 60 * 60 * 1000);
+    const holdUntil = computeHoldUntil(items);
 
     const order = await withTransaction(async (client) => {
       items = await enrichItemsSeller(client, items);
+      const deliveryEmail = await resolveDeliveryEmail(req, client);
+      if (!deliveryEmail) {
+        throw Object.assign(new Error("Vui lòng nhập email nhận hàng hợp lệ"), { status: 400 });
+      }
       const u = await client.query(
         `SELECT id, balance_cents, email FROM users WHERE id = $1 FOR UPDATE`,
         [req.user.id]
@@ -122,15 +257,25 @@ async function createOrder(req, res) {
         throw err;
       }
 
+      await vpnPool.ready();
       for (const it of items) {
+        const stockId = stock.resolveStockProductId(it);
+        if (
+          vpnPool.handlesItem(it) ||
+          octoprox.handlesItem(it) ||
+          stock.isManualFulfillment(stockId) ||
+          stock.isLocationProxyItem(it)
+        ) {
+          continue;
+        }
         const c = await client.query(
           `SELECT COUNT(*)::int AS n FROM stock_items
            WHERE product_id = $1 AND status = 'available'`,
-          [String(it.id)]
+          [stockId]
         );
         if ((c.rows[0]?.n || 0) < it.qty) {
           const err = new Error(
-            `Tạm hết hàng: ${it.name} (mã #${it.id}). Còn ${c.rows[0]?.n || 0}/${it.qty}.`
+            `Tạm hết hàng: ${it.name} (mã #${stockId}). Còn ${c.rows[0]?.n || 0}/${it.qty}.`
           );
           err.status = 409;
           throw err;
@@ -144,9 +289,9 @@ async function createOrder(req, res) {
 
       const publicCode = await allocPublicCode(client);
       const o = await client.query(
-        `INSERT INTO orders (buyer_id, items_json, total_cents, status, delivery_note, delivery_payload, hold_until, promo_code, discount_cents, subtotal_cents, public_code)
-         VALUES ($1,$2,$3,'delivered',$4,'[]'::jsonb,$5,$6,$7,$8,$9)
-         RETURNING id, public_code, total_cents, status, delivery_note, delivery_payload, hold_until, created_at, items_json, promo_code, discount_cents, subtotal_cents`,
+        `INSERT INTO orders (buyer_id, items_json, total_cents, status, delivery_note, delivery_payload, hold_until, promo_code, discount_cents, subtotal_cents, public_code, guest_email)
+         VALUES ($1,$2,$3,'delivered',$4,'[]'::jsonb,$5,$6,$7,$8,$9,$10)
+         RETURNING id, public_code, total_cents, status, delivery_note, delivery_payload, hold_until, created_at, items_json, promo_code, discount_cents, subtotal_cents, guest_email, buyer_id`,
         [
           user.id,
           JSON.stringify(items),
@@ -156,32 +301,42 @@ async function createOrder(req, res) {
           promoCode || null,
           discount,
           subtotal,
-          publicCode
+          publicCode,
+          deliveryEmail
         ]
       );
 
       const orderRow = o.rows[0];
       if (promoId) await cms.consumePromo(client, promoId, user.id, orderRow.id);
-      const delivered = await stock.allocateForItems(client, orderRow.id, items);
+      const deliveredResult = await deliverOrderItems(client, orderRow, items, {
+        publicCode
+      });
+      if (deliveredResult.projectId) oxProjectId = deliveredResult.projectId;
+      const delivered = deliveredResult.delivered;
       const noteLines = delivered
         .map((d) => d.name + " ×" + d.qty + ":\n" + d.lines.join("\n"))
         .join("\n\n");
       const fullNote =
-        "Giao tự động từ kho Vua MMO.\n\n" +
+        deliveryIntro(
+          deliveredResult.fromPool ? "pool" : deliveredResult.projectId ? "octoprox" : "",
+          "wallet"
+        ) +
+        "\n\n" +
         noteLines +
         (promoCode
           ? "\n\nĐã áp dụng mã " + promoCode + " (−" + discount.toLocaleString("vi-VN") + "₫)."
           : "") +
-        "\n\nTiền được giữ bảo vệ đến " +
+        "\n\nĐơn còn hiệu lực / khiếu nại đến " +
         holdUntil.toISOString().slice(0, 10) +
         ".";
 
       await client.query(
         `UPDATE orders
          SET delivery_payload = $1::jsonb,
-             delivery_note = $2
+             delivery_note = $2,
+             octoprox_project_id = COALESCE($4, octoprox_project_id)
          WHERE id = $3`,
-        [JSON.stringify(delivered), fullNote, orderRow.id]
+        [JSON.stringify(delivered), fullNote, orderRow.id, deliveredResult.projectId]
       );
 
       await client.query(
@@ -203,15 +358,24 @@ async function createOrder(req, res) {
 
       orderRow.delivery_payload = delivered;
       orderRow.delivery_note = fullNote;
+      orderRow.vpnStartIds = deliveredResult.vpnStartIds || [];
       return orderRow;
     });
+    oxProjectId = null;
+    vpnPool.activate(order.vpnStartIds);
 
     const bal = await query(`SELECT balance_cents FROM users WHERE id = $1`, [req.user.id]);
+    const emailResult = await notifyOrderDelivered(order);
     return res.json({
       order: formatOrder(order),
-      balance: Number(bal.rows[0].balance_cents)
+      balance: Number(bal.rows[0].balance_cents),
+      emailSent: emailResult.sent,
+      deliveryEmail: emailResult.to || order.guest_email || ""
     });
   } catch (err) {
+    if (oxProjectId) {
+      await octoprox.deleteProject(oxProjectId).catch((e) => console.error("octoprox cleanup", e.message));
+    }
     if (err.status === 402) {
       return res.status(402).json({
         error: err.message,
@@ -278,7 +442,9 @@ function formatOrder(row) {
     disputeStatus: row.dispute_status || null,
     disputeReason: row.dispute_reason || "",
     shopToken: token,
-    shopName: name || (token ? "Shop" : "")
+    shopName: name || (token ? "Shop" : ""),
+    deliveryEmail: row.guest_email || "",
+    guestEmail: row.guest_email || ""
   };
 }
 
@@ -304,6 +470,7 @@ async function listOrders(req, res) {
        ''
      )
      WHERE o.buyer_id = $1
+       AND o.status NOT IN ('pending_payment','expired')
      ORDER BY o.created_at DESC LIMIT 200`,
     [req.user.id]
   );
@@ -594,10 +761,18 @@ async function releaseExpiredOrders() {
      SET status = 'released', released_at = NOW()
      WHERE status IN ('paid','delivered')
        AND hold_until <= NOW()
-     RETURNING id`
+     RETURNING id, octoprox_project_id`
   );
   if (r.rowCount) {
     console.log(`[escrow] released ${r.rowCount} orders`);
+  }
+  for (const row of r.rows) {
+    if (row.octoprox_project_id) {
+      octoprox.deleteProject(row.octoprox_project_id).catch((e) =>
+        console.error("octoprox release", row.id, e.message)
+      );
+    }
+    vpnPool.releaseOrder(row.id);
   }
 }
 
@@ -605,13 +780,18 @@ const orderQr = require("./order-qr").attach({
   normalizeItems,
   enrichItemsSeller,
   allocPublicCode,
-  formatOrder
+  formatOrder,
+  computeHoldUntil,
+  parsePackageHoldDays
 });
 
 module.exports = {
   createCheckoutQr: orderQr.createCheckoutQr,
   getPayStatus: orderQr.getPayStatus,
   fulfillQrPaidOrder: orderQr.fulfillQrPaidOrder,
+  notifyOrderDelivered,
+  resolveDeliveryEmail,
+  normalizeDeliveryEmail,
   createOrder,
   listOrders,
   getOrder,
@@ -620,5 +800,7 @@ module.exports = {
   reviewOrder,
   listProductReviews,
   listMyReviews,
-  releaseExpiredOrders
+  releaseExpiredOrders,
+  deliverOrderItems,
+  deliveryIntro
 };
