@@ -11,23 +11,51 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
-      - name: Pack from source VPS (187.127.207.14)
+      - name: Probe both VPS
         env:
           VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          set +e
+          export SSHPASS="$VPS_PASS"
+          for H in 187.52.116.85 187.127.207.14; do
+            echo "=== probe $H ==="
+            sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 "root@$H" "hostname; ls /var/www 2>/dev/null | tr '\n' ' '; echo; pm2 jlist 2>/dev/null | python3 -c \"import sys,json;d=json.load(sys.stdin);print(','.join(x['name']+':'+x['pm2_env']['status'] for x in d))\" 2>/dev/null || true"
+            echo "exit=$?"
+          done
+
+      - name: Migrate via destination VPS pull
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.52.116.85"
           SRC: "187.127.207.14"
         run: |
           set -euo pipefail
           export SSHPASS="$VPS_PASS"
-          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@$SRC"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
           SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
-          $SSH 'bash -s' <<'REMOTE'
+
+          # Upload restore script to DEST
+          $SCP scripts/remote-restore-vuaproxy-on-old.sh "root@$DEST:/tmp/remote-restore-vuaproxy-on-old.sh"
+
+          # On DEST: install sshpass, pull pack from SRC (VPS-to-VPS), restore
+          $SSH "root@$DEST" "SRC=$SRC DEST=$DEST VPS_PASS=$(printf %q "$VPS_PASS") bash -s" <<'REMOTE'
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          if ! command -v sshpass >/dev/null 2>&1; then
+            apt-get update -qq && apt-get install -y -qq sshpass
+          fi
+          export SSHPASS="$VPS_PASS"
+          SSHSRC="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@$SRC"
+          SCPSRC="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+
+          echo "=== pack on SRC via DEST ==="
+          $SSHSRC 'bash -s' <<'PACK'
           set -euo pipefail
           mkdir -p /tmp/vuaproxy-pack
           rm -rf /tmp/vuaproxy-pack/*
+          test -d /var/www/vuaproxy-api
           cd /var/www/vuaproxy-api
-          tar -czf /tmp/vuaproxy-pack/api.tar.gz \
-            --exclude=node_modules --exclude=.env --exclude=data/vpn-pool \
-            .
+          tar -czf /tmp/vuaproxy-pack/api.tar.gz --exclude=node_modules --exclude=.env --exclude=data/vpn-pool .
           cp -f /var/www/vuaproxy-api/.env /tmp/vuaproxy-pack/env.prod
           if [ -d /var/www/vuaproxy/uploads ]; then
             tar -czf /tmp/vuaproxy-pack/uploads.tar.gz -C /var/www/vuaproxy uploads
@@ -35,55 +63,41 @@ jobs:
             mkdir -p /tmp/vuaproxy-empty/uploads
             tar -czf /tmp/vuaproxy-pack/uploads.tar.gz -C /tmp/vuaproxy-empty uploads
           fi
-          # DB dump: parse DATABASE_URL
-          URL=$(grep '^DATABASE_URL=' /var/www/vuaproxy-api/.env | cut -d= -f2-)
-          # Prefer docker exec pg_dump if container exists
           if docker ps --format '{{.Names}}' | grep -qx vuaproxy-pg; then
-            docker exec vuaproxy-pg pg_dump -U vuaproxy -d vuaproxy -Fc -f /tmp/vuaproxy.dump || \
-              docker exec vuaproxy-pg pg_dump -U postgres -d vuaproxy -Fc -f /tmp/vuaproxy.dump
+            docker exec vuaproxy-pg bash -lc 'pg_dump -U vuaproxy -d vuaproxy -Fc -f /tmp/vuaproxy.dump || pg_dump -U postgres -d vuaproxy -Fc -f /tmp/vuaproxy.dump'
             docker cp vuaproxy-pg:/tmp/vuaproxy.dump /tmp/vuaproxy-pack/db.dump
           elif docker ps --format '{{.Names}}' | grep -qx supabase-db; then
             docker exec supabase-db pg_dump -U postgres -d vuaproxy -Fc -f /tmp/vuaproxy.dump
             docker cp supabase-db:/tmp/vuaproxy.dump /tmp/vuaproxy-pack/db.dump
           else
+            URL=$(grep '^DATABASE_URL=' /var/www/vuaproxy-api/.env | cut -d= -f2-)
             pg_dump "$URL" -Fc -f /tmp/vuaproxy-pack/db.dump
           fi
-          ls -lh /tmp/vuaproxy-pack
           tar -czf /tmp/vuaproxy-migrate.tgz -C /tmp/vuaproxy-pack .
           ls -lh /tmp/vuaproxy-migrate.tgz
-          REMOTE
-          mkdir -p /tmp/mig
-          $SCP "root@$SRC:/tmp/vuaproxy-migrate.tgz" /tmp/mig/vuaproxy-migrate.tgz
-          ls -lh /tmp/mig/vuaproxy-migrate.tgz
+          PACK
 
-      - name: Restore onto destination VPS (187.52.116.85)
-        env:
-          VPS_PASS: ${{ secrets.VPS_PASS }}
-          DEST: "187.52.116.85"
-        run: |
-          set -euo pipefail
-          export SSHPASS="$VPS_PASS"
-          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@$DEST"
-          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
-          $SCP /tmp/mig/vuaproxy-migrate.tgz "root@$DEST:/tmp/vuaproxy-migrate.tgz"
-          $SCP scripts/remote-restore-vuaproxy-on-old.sh "root@$DEST:/tmp/remote-restore-vuaproxy-on-old.sh"
-          $SSH 'bash -s' <<'REMOTE'
-          set -euo pipefail
-          sed -i 's/\r$//' /tmp/remote-restore-vuaproxy-on-old.sh
+          echo "=== pull tarball to DEST ==="
+          $SCPSRC "root@$SRC:/tmp/vuaproxy-migrate.tgz" /tmp/vuaproxy-migrate.tgz
           rm -rf /tmp/vuaproxy-migrate
           mkdir -p /tmp/vuaproxy-migrate
           tar -xzf /tmp/vuaproxy-migrate.tgz -C /tmp/vuaproxy-migrate
           ls -lh /tmp/vuaproxy-migrate
+          sed -i 's/\r$//' /tmp/remote-restore-vuaproxy-on-old.sh
           bash /tmp/remote-restore-vuaproxy-on-old.sh
           REMOTE
 
-      - name: Stop API on source VPS (avoid double-write)
+      - name: Stop API on source if reachable
         if: success()
         env:
           VPS_PASS: ${{ secrets.VPS_PASS }}
           SRC: "187.127.207.14"
+          DEST: "187.52.116.85"
         run: |
-          set -euo pipefail
+          set +e
           export SSHPASS="$VPS_PASS"
-          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 "root@$SRC" \
-            'pm2 stop vuaproxy-api || true; pm2 save || true; echo stopped; curl -sS -m 3 http://127.0.0.1:3101/health || echo offline'
+          # Prefer stopping via DEST->SRC hop
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 "root@$DEST" \
+            "export SSHPASS='$VPS_PASS'; sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 root@$SRC 'pm2 stop vuaproxy-api; pm2 save; echo stopped'" \
+            || sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 "root@$SRC" 'pm2 stop vuaproxy-api; pm2 save; echo stopped-direct' \
+            || echo 'could not stop source (ok if already offline)'
