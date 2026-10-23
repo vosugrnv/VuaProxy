@@ -1,12 +1,26 @@
-/* Shared API client for Vua MMO wallet */
+/* Shared API client for Vua Proxy wallet */
 (function () {
   const TOKEN_KEY = "vuammo_token";
+  const PROD_HOST = "www.vuaproxy.cloud";
+
+  // Apex vuaproxy.cloud → 308 sang www; fetch POST không follow → "Failed to fetch"
+  try {
+    if (location.hostname === "vuaproxy.cloud") {
+      location.replace(
+        "https://" + PROD_HOST + location.pathname + location.search + location.hash
+      );
+    }
+  } catch (_) {}
 
   function apiBase() {
     if (window.VUAMMO_API_BASE) return window.VUAMMO_API_BASE.replace(/\/$/, "");
     const { protocol, hostname, port } = window.location;
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return "http://127.0.0.1:3100";
+    }
+    // Luôn gọi www để tránh 308 làm gãy tạo QR / nạp tiền
+    if (hostname === "vuaproxy.cloud" || hostname === PROD_HOST) {
+      return "https://" + PROD_HOST + "/api";
     }
     return protocol + "//" + hostname + (port ? ":" + port : "") + "/api";
   }
@@ -37,11 +51,21 @@
     const token = getToken();
     if (token) headers.Authorization = "Bearer " + token;
 
-    const res = await fetch(apiBase() + path, {
-      credentials: "include",
-      ...options,
-      headers
-    });
+    let res;
+    try {
+      res = await fetch(apiBase() + path, {
+        credentials: "include",
+        ...options,
+        headers
+      });
+    } catch (netErr) {
+      const err = new Error(
+        "Không kết nối được máy chủ. Mở https://www.vuaproxy.cloud rồi thử lại"
+      );
+      err.status = 0;
+      err.cause = netErr;
+      throw err;
+    }
 
     let data = null;
     const text = await res.text();

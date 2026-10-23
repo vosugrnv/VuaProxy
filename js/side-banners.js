@@ -4,6 +4,10 @@
 
   const path = String(location.pathname || "");
   if (/\/(admin|tin-nhan|thanh-toan)(\/|$)/i.test(path)) return;
+  /* Country pages: full-bleed dark sections — side rails che tiêu đề */
+  if (/\/tat-ca-khu-vuc\/[a-z0-9-]+\/?$/i.test(path)) return;
+  /* Dark LoHa-style hero occupies full first viewport — hide rails on that page */
+  if (document.getElementById("heroDark")) return;
 
   if (!document.getElementById("sidePromoRailsCss")) {
     const style = document.createElement("style");
@@ -119,31 +123,31 @@
 
   const LEFT = {
     theme: "capcut",
-    href: "/tat-ca-san-pham/tai-khoan-capcut-pro-gia-re-mo-full-tinh-nang-bao-hanh-suot-thoi-gian-14924",
-    title: "CapCut Pro",
-    shop: "phucdeal",
-    sub: "Full tính năng · Bảo hành",
-    price: "8.000₫",
-    image: "/images/side-banners/capcut-pro-14924.webp",
-    tag: "Deal sốc",
-    hot: "HOT",
-    headline: "Edit video Pro\nkhông giới hạn",
+    href: "/tat-ca-khu-vuc/proxy-my",
+    title: "Proxy Mỹ",
+    shop: "Vua Proxy",
+    sub: "Residential & Datacenter",
+    price: "Từ 10.000₫",
+    image: "/images/flags/us.png",
+    tag: "Hot",
+    hot: "US",
+    headline: "Proxy Mỹ\nIP sạch · giao nhanh",
     pitch: "Chỉ từ",
-    pitchStrong: "8.000₫ / gói"
+    pitchStrong: "10.000₫"
   };
   const RIGHT = {
     theme: "netflix",
-    href: "/tat-ca-san-pham/netflix-premium-chuan-4k-xem-phim-tha-ga-khong-gian-doan-10486",
-    title: "Netflix Premium 4K",
-    shop: "lanstore",
-    sub: "Xem phim thả ga",
-    price: "29.000₫",
-    image: "/images/side-banners/netflix-premium-10486.png",
-    tag: "4K Ultra HD",
-    hot: "BEST",
-    headline: "Xem phim thả ga\nchuẩn Premium",
-    pitch: "Giá ưu đãi",
-    pitchStrong: "29.000₫"
+    href: "/tat-ca-khu-vuc",
+    title: "Tất cả quốc gia",
+    shop: "Vua Proxy",
+    sub: "Đa quốc gia",
+    price: "Xem gói",
+    image: "/images/flags/vn.png",
+    tag: "190 nước",
+    hot: "NEW",
+    headline: "Chọn quốc gia\nmua proxy ngay",
+    pitch: "Khám phá",
+    pitchStrong: "Tất cả khu vực"
   };
 
   function card(item, side) {

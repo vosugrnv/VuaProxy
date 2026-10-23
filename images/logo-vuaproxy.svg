@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 120" role="img" aria-label="VuaProxy">
+  <defs>
+    <style>
+      .wp-word {
+        font-family: Arial Black, Helvetica Neue, Arial, sans-serif;
+        font-size: 84px;
+        font-weight: 900;
+        letter-spacing: -2px;
+      }
+    </style>
+  </defs>
+  <text class="wp-word" x="4" y="88" fill="#111111">Vua</text>
+  <text class="wp-word" x="218" y="88" fill="#DC2626">Pr</text>
+  <circle cx="382" cy="62" r="30" fill="#DC2626"/>
+  <g fill="none" stroke="#111111" stroke-width="5" stroke-linecap="round">
+    <path d="M369 62 a13 13 0 0 1 26 0"/>
+    <path d="M361 54 a22 22 0 0 1 42 0"/>
+  </g>
+  <circle cx="382" cy="73" r="4" fill="#111111"/>
+  <text class="wp-word" x="420" y="88" fill="#DC2626">xy</text>
+</svg>

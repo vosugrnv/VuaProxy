@@ -5,20 +5,15 @@ function imageFor(name){ return IMAGE_BY_NAME[name] || RAW_PRODUCTS[0].image; }
 function hay(p){ return (p.name + " " + (p.cats || []).join(" ")).toLowerCase(); }
 function hasCat(p, re){ return (p.cats || []).some(c => re.test(String(c))); }
 
-const BRAND_RE = /(chatgpt|claude|gemini|grok|midjourney|runway|kling|heygen|perplexity|cursor|copilot|openai|capcut|canva|figma|adobe|netflix|spotify|youtube|duolingo|elsa|busuu|memrise|babbel|grammarly|quillbot|coursera|udemy|skillshare|scribd|blinkist|kindle|vpn|proxy|nord|expressvpn|meitu|monica|vbee|elevenlabs|gamma|hailou|steam|tiktok|instagram|threads|office|jetbrains)/i;
+const BRAND_RE = /(luna|9proxy|proxy|residential|ipv4|ipv6|viet\s*nam|vietnam)/i;
 
 const CAT = {
-  ai: p => hasCat(p, /chatgpt|claude|gemini|grok|midjourney|runway|kling|heygen|perplexity|cursor|copilot|openai|monica|elevenlabs|gamma|hailou|google ultra|công cụ ai|\bai\b/i)
-    || /chatgpt|claude|gemini|grok|midjourney|runway|kling|heygen|perplexity|cursor|copilot|openai|monica|elevenlabs|gamma|hailou|veo|gpt/i.test(hay(p)),
-  giaitri: p => hasCat(p, /netflix|spotify|youtube|vieon|wetv|iqiyi|hbo|prime|fpt play|galaxy play|giải trí/i)
-    || /netflix|spotify|youtube|vieon|wetv|iqiyi|hbo|prime|fpt play|galaxy play/i.test(hay(p)),
-  ngoaingu: p => hasCat(p, /duolingo|elsa|busuu|memrise|babbel|grammarly|quillbot|ngoại ngữ/i)
-    || /duolingo|elsa|busuu|memrise|babbel|grammarly|quillbot|ngoại ngữ/i.test(hay(p)),
-  khoahoc: p => hasCat(p, /khoá học|khóa học|coursera|udemy|skillshare|masterclass|datacamp|codecademy/i)
-    || /coursera|udemy|skillshare|masterclass|datacamp|codecademy|khoá học|khóa học/i.test(hay(p)),
-  docsach: p => hasCat(p, /scribd|blinkist|kindle|đọc sách|wattpad/i)
-    || /scribd|blinkist|kindle|đọc sách|wattpad/i.test(hay(p)),
-  khac: p => !CAT.ai(p) && !CAT.giaitri(p) && !CAT.ngoaingu(p) && !CAT.khoahoc(p) && !CAT.docsach(p),
+  proxy: p => hasCat(p, /^proxy$/i) || /\bproxy\b/i.test(hay(p)),
+  luna: p => hasCat(p, /luna/i) || /luna/i.test(hay(p)),
+  nine: p => hasCat(p, /9\s*proxy|9proxy/i) || /9\s*proxy|9proxy/i.test(hay(p)),
+  vn: p => /việt\s*nam|vietnam|\bvn\b/i.test(hay(p)),
+  residential: p => /residential|dân\s*cư/i.test(hay(p)),
+  khac: p => !CAT.luna(p) && !CAT.nine(p),
 };
 
 /** Key dùng để tránh trùng loại (CapCut + CapCut) trong cùng một mục */
@@ -62,18 +57,6 @@ function pickDiverse(pool, limit){
   return out;
 }
 
-const REVIEWS = [
-  {text:"Mua Canva Pro với Office 365 ở Vua MMO 2 lần, giá rẻ hơn ngoài 30%, giao acc nhanh 5p. Dùng ổn không lỗi, hỗ trợ chat rep liền. Giờ recommend bạn bè dùng.", name:"Nguyễn Văn Hùng", role:"Freelancer"},
-  {text:"Lấy Grammarly với Netflix, acc xịn dùng mượt. Giá rẻ cho sinh viên, chat trực tiếp hướng dẫn kích hoạt nhanh. Tiết kiệm tiền, sẽ mua tiếp.", name:"Trần Anh Tuấn", role:"SV ĐH Kinh tế Quốc dân"},
-  {text:"Dùng VPN + Google One hơn năm, nâng cấp mấy lần không vấn đề. Giá tốt, support kỹ thuật nhiệt tình. Chạy ads FB ngon hơn hẳn.", name:"Lê Đức Minh", role:"Chủ shop Ba Đình"},
-  {text:"Dịch vụ uy tín, có bảo hành rõ ràng. Có lỗi là shop xử lý ngay, không vòng vo. Làm ăn đàng hoàng nên mình tin tưởng lâu dài.", name:"Phan Thị Huyền", role:"Chủ shop online"},
-  {text:"Bên Vua MMO giao tài khoản nhanh, thanh toán xong 2-3 phút là có. Mình mua nhiều lần rồi, lần nào cũng ok.", name:"Đỗ Văn Nam", role:"Kinh doanh online"},
-  {text:"Đã mua Google One và VPN để chạy ads, tốc độ ổn định, không lỗi vặt. Shop hỗ trợ đổi IP, xử lý nhanh khi có vấn đề. Dịch vụ đáng tiền.", name:"Nguyễn Quang Huy", role:"Ads Freelancer"},
-  {text:"Lấy combo Netflix + Spotify dùng êm, không bị out acc. Hướng dẫn kích hoạt chi tiết, người không rành cũng làm được. Giá quá hợp lý cho sinh viên.", name:"Hoàng Minh Đức", role:"Sinh viên"},
-  {text:"Acc Netflix 4K xem mượt, không bị out giữa chừng. Hướng dẫn chi tiết, mình làm theo là xong.", name:"Trương Hải Yến", role:"Nhân viên văn phòng"},
-  {text:"Shop giao acc nhanh, thanh toán xong là nhận liền. Có bảo hành nên yên tâm dùng lâu dài.", name:"Nguyễn Văn Khải", role:"Kinh doanh"},
-];
-
 function productIsSelling(p){
   if(!p) return false;
   if(!p.id || !p.slug) return false;
@@ -88,17 +71,133 @@ function sellingPool(){
   return RAW_PRODUCTS.filter(productIsSelling);
 }
 
-const STAR_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.9-6.2 3.9 1.6-7L2 9.5l7.1-.6z"/></svg>';
-function reviewCard(r){
-  return `
-  <div class="review-item">
-    <div class="review-card">
-      <div class="review-stars">${STAR_SVG.repeat(5)}</div>
-      <p>${r.text}</p>
-      <div class="review-who">${r.name}<span>${r.role}</span></div>
-    </div>
-  </div>`;
+const REVIEWS = [
+  {
+    name: "Minh Anh",
+    handle: "@minh.anh.design",
+    avatar: "images/reviews/avt01.jpg?v=vn1",
+    text: "Mình hợp tác với Vua Proxy từ lúc mới bắt đầu bán lại, và có lãi ngay từ tháng đầu tiên. Giá sỉ tốt nên mình bán lại vẫn lời ổn. Proxy chạy khỏe, support thì luôn sẵn sàng, không bao giờ phải chờ lâu."
+  },
+  {
+    name: "Trần Anh Tuấn",
+    handle: "@tuan.dev",
+    avatar: "images/reviews/avt03.jpg?v=vn1",
+    text: "Mình từng thử nhiều nơi rồi, nhưng Vua Proxy đúng là hiếm có: giá hợp lý mà chất lượng vẫn rất tốt. Kết nối nhanh, mượt, support hiểu vấn đề và giải quyết cực nhanh. Nhờ vậy mình scale scrape và tool nhẹ nhàng hơn hẳn."
+  },
+  {
+    name: "Lê Đức Minh",
+    handle: "@minh.agency",
+    avatar: "images/reviews/avt05.jpg?v=vn1",
+    text: "Team mình lấy combo nhiều quốc gia để chạy ads và tool. Quản lý gói rõ ràng, IP lỗi được xử lý nhanh trong bảo hành. Support rất chuyên nghiệp, giải quyết vấn đề nhanh, không lòng vòng — yên tâm dùng lâu dài."
+  },
+  {
+    name: "Phan Thị Huyền",
+    handle: "@huyen.seller",
+    avatar: "images/reviews/avt02.jpg?v=vn1",
+    text: "Giá cực dễ tiếp cận, lúc đầu mình chỉ test thử vài IP static SG, giờ thì dùng hằng ngày luôn. Ping thấp, chạy tool MMO ổn, thanh toán xong nhận info ngay. Đội ngũ hỗ trợ thân thiện và hướng dẫn rõ từng bước."
+  },
+  {
+    name: "Đỗ Văn Nam",
+    handle: "@nam.growth",
+    avatar: "images/reviews/avt06.jpg?v=vn1",
+    text: "Bên này giá tốt nhưng chất lượng rất xịn. Proxy xoay residential JP nhanh và sạch, không bị block sớm như datacenter. Hỏi gì là có người support liền. Rất hợp để làm growth và các dự án cần tốc độ cao."
+  },
+  {
+    name: "Nguyễn Quang Huy",
+    handle: "@huy.freelance",
+    avatar: "images/reviews/avt07.jpg?v=vn1",
+    text: "Mình thử nhắn support lúc khá muộn mà vẫn có người hỗ trợ ngay, bất ngờ thật sự. Proxy ổn định, hướng dẫn gắn vào trình duyệt và antidetect rõ ràng. Người mới cũng làm được, không bị bỏ mặc."
+  },
+  {
+    name: "Hoàng Minh Đức",
+    handle: "@duc.buyer",
+    avatar: "images/reviews/avt08.jpg?v=vn1",
+    text: "Trước mình dùng dịch vụ đắt hơn mà không bằng ở đây. Gói 30 ngày hợp lý, IP riêng không share, tốc độ ổn để chạy ads. Website mua dễ, chọn quốc gia rõ ràng — thật sự là lựa chọn sáng suốt khi chuyển sang Vua Proxy."
+  },
+  {
+    name: "Trương Hải Yến",
+    handle: "@yen.perf",
+    avatar: "images/reviews/avt04.jpg?v=vn1",
+    text: "Mình đã dùng Vua Proxy cho nhiều chiến dịch performance hơn nửa năm nay. Static DE/FR cực kỳ ổn định, tốc độ nhanh và hiếm khi gặp sự cố. Bảo hành minh bạch nên team rất yên tâm mở rộng thêm gói."
+  },
+  {
+    name: "Nguyễn Văn Khải",
+    handle: "@khai.shop",
+    avatar: "images/reviews/avt09.jpg?v=vn1",
+    text: "Mình thấy Vua Proxy đúng là giải pháp tối ưu cả về chi phí lẫn hiệu quả. Hệ thống giao hàng tự động, tốc độ nhanh và quan trọng nhất là uptime tốt. Giá và gói rõ ràng — rất đáng để gắn bó lâu dài cho shop."
+  },
+  {
+    name: "Phương Thảo",
+    handle: "@thaoproxy",
+    avatar: "images/reviews/avt10.jpg?v=vn1",
+    text: "Giá bán lại bên này quá hời luôn, mình đang kiếm ổn hơn so với chỗ cũ. Support 24/7 thì nhiệt tình khỏi bàn, hỗ trợ từng bước lúc mình mới bắt đầu. Proxy residential xoay scale account ổn, ít die — rất đáng hợp tác lâu dài."
+  },
+  {
+    name: "Hữu Dũng",
+    handle: "@dung.proxy",
+    avatar: "images/reviews/avt11.jpg?v=vn1",
+    text: "Mình chuyển sang Vua Proxy vì giá tốt mà vẫn sạch. Chạy ads và tool song song không bị nghẽn, kết nối mượt. Support hiểu vấn đề nhanh, không phải giải thích đi giải thích lại. Nhờ vậy team scale công việc nhẹ nhàng hơn."
+  },
+  {
+    name: "Thanh Hà",
+    handle: "@thanhha.proxy",
+    avatar: "images/reviews/avt12.jpg?v=vn1",
+    text: "Làm proxy mấy năm rồi, mình khẳng định đây là nơi hiếm hoi có giá hợp lý mà chất lượng vẫn đảm bảo. IP US/UK sạch, gắn antidetect browser mượt. Support chuyên nghiệp, giải quyết nhanh — đáng để gắn bó lâu dài cho cả team."
+  },
+];
+
+function reviewInitials(name){
+  return String(name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(-2)
+    .map(w => w[0])
+    .join("")
+    .toUpperCase();
 }
+
+function reviewMarqueeCard(r){
+  const initials = reviewInitials(r.name);
+  const avatar = r.avatar
+    ? `<img class="rm-avatar" src="${r.avatar}" alt="" width="44" height="44" loading="lazy" decoding="async">`
+    : `<span class="rm-avatar rm-avatar--fallback" aria-hidden="true">${initials}</span>`;
+  return `
+  <article class="rm-card">
+    <div class="rm-card-head">
+      ${avatar}
+      <div class="rm-meta">
+        <strong>${r.name}</strong>
+        <span>${r.handle || ""}</span>
+      </div>
+    </div>
+    <p>${r.text}</p>
+  </article>`;
+}
+
+function renderReviewsMarquee(){
+  const grid = document.getElementById("reviewsMarqueeGrid");
+  if(!grid) return;
+  const cols = [...grid.querySelectorAll(".reviews-col")];
+  if(!cols.length) return;
+  const buckets = [[], [], []];
+  REVIEWS.forEach((r, i) => buckets[i % 3].push(r));
+  cols.forEach((col, idx) => {
+    const items = buckets[idx].length ? buckets[idx] : REVIEWS.slice(idx, idx + 4);
+    const html = items.map(reviewMarqueeCard).join("");
+    col.innerHTML = `<div class="reviews-col-track">${html}${html}</div>`;
+  });
+
+  const section = grid.closest(".reviews-marquee") || grid;
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => {
+      const on = !!(entries[0] && entries[0].isIntersecting);
+      section.classList.toggle("is-paused", !on);
+    }, { rootMargin: "80px 0px", threshold: 0.02 });
+    io.observe(section);
+  }
+}
+renderReviewsMarquee();
+
 
 /* ---------- Hero slider ---------- */
 (function initHeroSlider(){
@@ -151,32 +250,36 @@ function renderQuick(){
   el.innerHTML = items.map(productCard).join("");
 }
 renderQuick();
-document.getElementById("seeMoreBtn").textContent = `Xem thêm (${Math.max(0, HOME_QUICK.length-10)})`;
-document.getElementById("seeMoreBtn").addEventListener("click", ()=>{
+document.getElementById("seeMoreBtn") && (document.getElementById("seeMoreBtn").textContent = `Xem thêm (${Math.max(0, HOME_QUICK.length-10)})`);
+document.getElementById("seeMoreBtn")?.addEventListener("click", ()=>{
   quickExpanded = true;
   renderQuick();
 });
-document.getElementById("seeLessBtn").addEventListener("click", ()=>{
+document.getElementById("seeLessBtn")?.addEventListener("click", ()=>{
   quickExpanded = false;
   renderQuick();
-  document.getElementById("quickPicks").scrollIntoView({behavior:"smooth", block:"start"});
+  document.getElementById("quickPicks")?.scrollIntoView({behavior:"smooth", block:"start"});
 });
 
-const aiProducts = pickDiverse(sellingPool().filter(CAT.ai), 10);
-document.getElementById("aiGrid").innerHTML = aiProducts.map(productCard).join("");
+const aiProducts = pickDiverse(sellingPool().filter(CAT.proxy), 10);
+const aiGrid = document.getElementById("aiGrid");
+if (aiGrid) aiGrid.innerHTML = aiProducts.map(productCard).join("");
 
 const bestList = pickDiverse(sellingPool(), 50);
 const PAGE_SIZE = 10;
 let currentPage = 1;
 function renderBest(){
+  const grid = document.getElementById("bestGrid");
+  if (!grid) return;
   const start = (currentPage-1)*PAGE_SIZE;
   const items = bestList.slice(start, start+PAGE_SIZE);
-  document.getElementById("bestGrid").innerHTML = items.map(productCard).join("");
+  grid.innerHTML = items.map(productCard).join("");
   renderPagination();
 }
 function renderPagination(){
-  const totalPages = Math.max(1, Math.ceil(bestList.length/PAGE_SIZE));
   const el = document.getElementById("pagination");
+  if (!el) return;
+  const totalPages = Math.max(1, Math.ceil(bestList.length/PAGE_SIZE));
   let html = "";
   const maxShown = 6;
   for(let i=1;i<=Math.min(maxShown,totalPages);i++){
@@ -191,61 +294,12 @@ function renderPagination(){
   html += `<button onclick="goPage(${Math.min(currentPage+1,totalPages)})">→</button>`;
   el.innerHTML = html;
 }
-window.goPage = p => { currentPage = p; renderBest(); document.getElementById("bestseller").scrollIntoView({behavior:"smooth"}); };
+window.goPage = p => {
+  currentPage = p;
+  renderBest();
+  document.getElementById("bestseller")?.scrollIntoView({behavior:"smooth"});
+};
 renderBest();
-
-function renderLearn(tab){
-  const fn = CAT[tab] || CAT.khac;
-  const items = pickDiverse(sellingPool().filter(fn), 8);
-  document.getElementById("learnGrid").innerHTML = items.map(productCard).join("");
-}
-document.querySelectorAll(".tab").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    renderLearn(btn.dataset.tab);
-  });
-});
-renderLearn("ngoaingu");
-
-const reviewTrack = document.getElementById("reviewTrack");
-const reviewDots = document.getElementById("reviewDots");
-reviewTrack.innerHTML = REVIEWS.map(reviewCard).join("");
-let reviewPage = 0;
-function reviewItemsPerPage(){
-  const w = window.innerWidth;
-  if(w <= 699) return 1;
-  if(w <= 1023) return 2;
-  return 3;
-}
-function renderReviewDots(){
-  const perPage = reviewItemsPerPage();
-  const pages = Math.ceil(REVIEWS.length / perPage);
-  if(reviewPage > pages-1) reviewPage = 0;
-  reviewDots.innerHTML = Array.from({length:pages}, (_,i)=>
-    `<button class="dot${i===reviewPage?" active":""}" data-page="${i}"><span></span></button>`
-  ).join("");
-  reviewTrack.style.transform = `translateX(-${reviewPage*100}%)`;
-}
-reviewDots.addEventListener("click", (e)=>{
-  const btn = e.target.closest(".dot");
-  if(!btn) return;
-  reviewPage = parseInt(btn.dataset.page, 10);
-  renderReviewDots();
-});
-renderReviewDots();
-window.addEventListener("resize", renderReviewDots);
-function reviewPageCount(){ return Math.ceil(REVIEWS.length / reviewItemsPerPage()); }
-document.getElementById("reviewPrev").addEventListener("click", ()=>{
-  const pages = reviewPageCount();
-  reviewPage = (reviewPage - 1 + pages) % pages;
-  renderReviewDots();
-});
-document.getElementById("reviewNext").addEventListener("click", ()=>{
-  const pages = reviewPageCount();
-  reviewPage = (reviewPage + 1) % pages;
-  renderReviewDots();
-});
 
 /* ---------- Interactions ---------- */
 window.toggleWish = (btn) => {
@@ -311,22 +365,21 @@ window.showToast = function showToast(msg){
 };
 
 /* ---------- Drawer menu ---------- */
+/* Delegation: site-header rebuilds #catMenuBtn/#menuBtn after boot */
 const drawer = document.getElementById("drawer");
 const backdrop = document.getElementById("drawerBackdrop");
-function closeDrawer(){ drawer.classList.remove("open"); backdrop.classList.remove("open"); }
-document.getElementById("menuBtn").addEventListener("click", ()=>{
-  drawer.classList.add("open");
-  backdrop.classList.add("open");
-});
-backdrop.addEventListener("click", closeDrawer);
-drawer.querySelectorAll("a").forEach(a=>a.addEventListener("click", closeDrawer));
-document.getElementById("catMenuBtn").addEventListener("click", ()=>{
-  drawer.classList.add("open");
-  backdrop.classList.add("open");
-});
-document.getElementById("sideNavToggle")?.addEventListener("click", ()=>{
-  drawer.classList.add("open");
-  backdrop.classList.add("open");
+function closeDrawer(){
+  drawer?.classList.remove("open");
+  backdrop?.classList.remove("open");
+}
+function openDrawer(){
+  drawer?.classList.add("open");
+  backdrop?.classList.add("open");
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#catMenuBtn, #menuBtn, #sideNavToggle")) openDrawer();
+  if (e.target.closest("#drawerBackdrop")) closeDrawer();
+  if (e.target.closest("#drawer a")) closeDrawer();
 });
 
 /* ---------- Info block collapse ---------- */
@@ -337,4 +390,54 @@ infoToggleBtn?.addEventListener("click", ()=>{
   infoToggleBtn.innerHTML = collapsed ? `XEM THÊM <span>↓</span>` : `THU GỌN <span>↑</span>`;
   if(collapsed) infoToggleBtn.scrollIntoView({behavior:"smooth", block:"center"});
 });
+
+/* ---------- Trust band count-up (0 → target, once) ---------- */
+(function initTrustStatCountUp() {
+  const nums = document.querySelectorAll(".trust-stat-num[data-count]");
+  if (!nums.length) return;
+
+  function format(el, value) {
+    const decimals = Number(el.getAttribute("data-decimals") || 0);
+    const suffix = el.getAttribute("data-suffix") || "";
+    const n = decimals > 0 ? value.toFixed(decimals) : String(Math.round(value));
+    el.textContent = n + suffix;
+  }
+
+  function animate(el) {
+    if (el.dataset.counted === "1") return;
+    el.dataset.counted = "1";
+    const target = Number(el.getAttribute("data-count") || 0);
+    const decimals = Number(el.getAttribute("data-decimals") || 0);
+    const duration = 1400;
+    const start = performance.now();
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+    function frame(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const current = target * easeOutCubic(t);
+      format(el, current);
+      if (t < 1) requestAnimationFrame(frame);
+      else format(el, target);
+    }
+    format(el, 0);
+    requestAnimationFrame(frame);
+  }
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const root = entry.target;
+        root.querySelectorAll(".trust-stat-num[data-count]").forEach(animate);
+        io.unobserve(root);
+      });
+    },
+    { threshold: 0.35 }
+  );
+
+  const band = document.querySelector(".trust-band-stats") || nums[0].closest(".trust-band");
+  if (band) io.observe(band);
+  else nums.forEach(animate);
+})();
 

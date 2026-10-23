@@ -1,4 +1,4 @@
-/* Vua MMO Admin SPA — UI kiểu ZENA, nghiệp vụ Vua MMO */
+/* Vua Proxy Admin SPA — đơn proxy, ví, kho & chat hỗ trợ */
 (function () {
   const money = (n) =>
     window.VuammoApi && VuammoApi.money
@@ -15,11 +15,10 @@
   function siteBase() {
     if (window.VUAMMO_SITE_ORIGIN) return String(window.VUAMMO_SITE_ORIGIN).replace(/\/$/, "");
     const h = location.hostname || "";
-    if (h === "admin.vuammovn.pro") return "https://vuammovn.pro";
-    if (h === "admin.vuammo.com" || h.startsWith("admin.")) {
-      return "https://vuammovn.pro";
+    if (/vuaproxy\.cloud$/i.test(h) || h.startsWith("admin.")) {
+      return "https://www.vuaproxy.cloud";
     }
-    return "";
+    return "https://www.vuaproxy.cloud";
   }
   function siteUrl(path) {
     const p = path.startsWith("/") ? path : "/" + path;
@@ -45,7 +44,7 @@
       '">' +
       '<div class="adm-bubble ' +
       (staff ? "staff" : "user") +
-      '" style="white-space:normal">' +
+      '">' +
       html +
       "</div>" +
       '<div class="adm-msg-meta">' +
@@ -85,11 +84,14 @@
 
   const ORDER_LABELS = {
     all: "Tất cả",
-    paid: "Đã thanh toán",
-    delivered: "Đã giao",
+    waiting: "Chờ hoàn thành",
+    done: "Hoàn thành",
     disputed: "Khiếu nại",
-    released: "Hoàn tất",
-    refunded: "Đã hoàn"
+    // legacy (ẩn pill, vẫn map nếu API cũ)
+    paid: "Chờ hoàn thành",
+    delivered: "Chờ hoàn thành",
+    released: "Hoàn thành",
+    refunded: "Hoàn thành"
   };
   const DISPUTE_LABELS = {
     all: "Tất cả",
@@ -104,20 +106,65 @@
     release: "Giải ngân"
   };
 
+  function isHoldActive(o) {
+    return Boolean(o && o.holdUntil && new Date(o.holdUntil) > new Date());
+  }
+  function orderUiKey(o) {
+    if (!o) return "done";
+    if (o.status === "disputed" || (o.dispute && o.dispute.status === "open")) return "disputed";
+    if (["released", "refunded"].includes(o.status)) return "done";
+    if (["paid", "delivered"].includes(o.status)) {
+      if (o.holdUntil && new Date(o.holdUntil) <= new Date()) return "done";
+      return "waiting";
+    }
+    return "done";
+  }
+  function orderUiLabel(o) {
+    const key = orderUiKey(o);
+    return ORDER_LABELS[key] || key;
+  }
+
   const state = {
     view: "dashboard",
     user: null,
     supportVisitor: null,
+    supportGuestMeta: null,
+    pendingSupportChat: null,
     shopToken: null,
     shopName: null,
     shopVisitor: null,
     orders: { status: "all", range: "all", q: "", from: "", to: "" },
+    dashboard: { range: "all", from: "", to: "" },
     disputes: { status: "all", q: "" },
     ledger: { type: "all", q: "" },
     blog: { q: "", status: "all", locale: "all", category: "all" },
     badges: {},
-    badgeTimer: null
+    badgeTimer: null,
+    vpnTab: "proxies"
   };
+
+  function buyerSupportVisitorKey(buyerId) {
+    return buyerId ? "u_" + String(buyerId) : "";
+  }
+
+  function openSupportChatForOrder(o) {
+    if (!o) return;
+    const email = String(o.buyerEmail || "").trim();
+    const name = String(o.buyerName || "").trim() || "Khách";
+    const buyerId = o.buyerId || "";
+    state.pendingSupportChat = {
+      buyerId: buyerId,
+      visitorKey: buyerSupportVisitorKey(buyerId),
+      email: email,
+      name: name,
+      orderCode: o.code || String(o.id || "").slice(0, 8),
+      orderHint:
+        "Đơn #" +
+        (o.code || String(o.id || "").slice(0, 8)) +
+        (o.items && o.items[0] ? " · " + String(o.items[0].name || "") : "")
+    };
+    setView("chatSupport");
+  }
 
   function getCatalogProducts() {
     try {
@@ -132,30 +179,55 @@
     return Array.isArray(window.VUAMMO_SHOPS) ? window.VUAMMO_SHOPS : [];
   }
 
-  /** Map mã SP/biến thể → { title, subtitle } để hiển thị tồn kho */
+  /** Map mã SP/biến thể → { title, subtitle, countryCode, countryName } */
   let _stockNameMap = null;
   function getStockNameMap() {
     if (_stockNameMap) return _stockNameMap;
     const map = Object.create(null);
     getCatalogProducts().forEach((p) => {
       const name = p.name || ("SP #" + p.id);
+      const countryCode = String(p.countryCode || "").toLowerCase();
+      const countryName = String(p.countryName || "").trim();
+      const meta = {
+        title: name,
+        subtitle: "",
+        countryCode,
+        countryName
+      };
       if (Array.isArray(p.variants) && p.variants.length) {
         p.variants.forEach((v) => {
           map[String(v.id)] = {
             title: name,
-            subtitle: v.label || ("Biến thể #" + v.id)
+            subtitle: v.label || ("Biến thể #" + v.id),
+            countryCode,
+            countryName
           };
         });
       }
-      map[String(p.id)] = { title: name, subtitle: "" };
+      map[String(p.id)] = meta;
     });
     _stockNameMap = map;
     return map;
   }
   function stockProductLabel(productId) {
     const m = getStockNameMap()[String(productId)];
-    if (!m) return { title: "Không tìm thấy tên", subtitle: "" };
+    if (!m) return { title: "Không tìm thấy tên", subtitle: "", countryCode: "", countryName: "" };
     return m;
+  }
+  function stockCountryOptions(products) {
+    const map = Object.create(null);
+    (products || []).forEach((p) => {
+      const label = stockProductLabel(p.product_id);
+      const code = label.countryCode || "";
+      if (!code) return;
+      if (!map[code]) {
+        map[code] = {
+          v: code,
+          t: (label.countryName || code.toUpperCase()) + " (" + code.toUpperCase() + ")"
+        };
+      }
+    });
+    return Object.values(map).sort((a, b) => a.t.localeCompare(b.t, "vi"));
   }
 
   function getSharePosts() {
@@ -265,10 +337,12 @@
   }
   function statusTag(st) {
     const map = {
-      paid: "warn",
+      paid: "info",
       delivered: "info",
+      waiting: "info",
       disputed: "bad",
       released: "ok",
+      done: "ok",
       refunded: "pink",
       open: "warn",
       resolved: "pink",
@@ -283,6 +357,10 @@
       "</span>"
     );
   }
+  function orderStatusTag(o) {
+    const key = orderUiKey(o);
+    return statusTag(key);
+  }
   function moneyCls(n) {
     if (n > 0) return '<span class="adm-money-pos">+' + money(n) + "</span>";
     if (n < 0) return '<span class="adm-money-neg">' + money(n) + "</span>";
@@ -291,18 +369,103 @@
   function shopOfItem(item) {
     return item.seller || item.shopName || item.shop || "—";
   }
+  function countryCodeOfItem(item) {
+    if (!item) return "";
+    if (item.countryCode) return String(item.countryCode).toLowerCase();
+    if (item.country) return String(item.country).toLowerCase();
+    const img = String(item.image || "");
+    const mImg = img.match(/\/flags\/([a-z]{2})\./i);
+    if (mImg) return mImg[1].toLowerCase();
+    const id = String(item.id || "");
+    const mId = id.match(/^lcp-([a-z]{2})-/i);
+    if (mId) return mId[1].toLowerCase();
+    return "";
+  }
+  function countryLabelOfItem(item) {
+    const code = countryCodeOfItem(item);
+    if (!code) {
+      const parts = String((item && item.name) || "").split(" · ");
+      if (parts.length >= 2) return parts[1];
+      return "—";
+    }
+    const locs = window.VUAPROXY_LOCATIONS || [];
+    const hit = locs.find((x) => x.code === code);
+    if (hit) return (hit.nameVi || hit.name) + " (" + code.toUpperCase() + ")";
+    return code.toUpperCase();
+  }
+  function countriesOfOrder(o) {
+    return (
+      [
+        ...new Set(
+          (o.items || [])
+            .map((i) => countryLabelOfItem(i))
+            .filter((x) => x && x !== "—")
+        )
+      ].join(", ") || "—"
+    );
+  }
   function toast(msg) {
     if (window.VuammoApi && VuammoApi.showToast) VuammoApi.showToast(msg);
     else alert(msg);
   }
+  /** Popup xác nhận cho thao tác nguy hiểm (xóa / ẩn / hoàn tiền) */
+  function confirmAction(opts) {
+    const o = opts || {};
+    const title = o.title || "Xác nhận";
+    const message = o.message || "Bạn có chắc muốn thực hiện thao tác này?";
+    const okText = o.okText || "Xác nhận";
+    const cancelText = o.cancelText || "Huỷ";
+    const danger = o.danger !== false;
+    return new Promise((resolve) => {
+      const prev = document.getElementById("admConfirmModal");
+      if (prev) prev.remove();
+      const wrap = document.createElement("div");
+      wrap.id = "admConfirmModal";
+      wrap.className = "adm-modal-bg";
+      wrap.innerHTML =
+        '<div class="adm-modal" role="dialog" aria-modal="true">' +
+        "<h3>" +
+        esc(title) +
+        "</h3><p>" +
+        esc(message) +
+        '</p><div class="adm-compose-actions">' +
+        '<button type="button" class="btn btn-outline" data-c="0">' +
+        esc(cancelText) +
+        '</button><button type="button" class="btn ' +
+        (danger ? "btn-danger" : "btn-primary") +
+        '" data-c="1" autofocus>' +
+        esc(okText) +
+        "</button></div></div>";
+      document.body.appendChild(wrap);
+      const finish = (ok) => {
+        wrap.remove();
+        resolve(!!ok);
+      };
+      wrap.addEventListener("click", (e) => {
+        if (e.target === wrap) finish(false);
+      });
+      wrap.querySelector('[data-c="0"]').addEventListener("click", () => finish(false));
+      wrap.querySelector('[data-c="1"]').addEventListener("click", () => finish(true));
+      document.addEventListener(
+        "keydown",
+        function onKey(e) {
+          if (e.key === "Escape") {
+            document.removeEventListener("keydown", onKey);
+            finish(false);
+          }
+        },
+        { once: true }
+      );
+    });
+  }
+
 
   const BADGE_ACK_VIEWS = {
     orders: "orders",
     disputes: "disputes",
     blog: "blog",
     stock: "stock",
-    chatSupport: "chatSupport",
-    chatShop: "chatShop",
+    // chatSupport / chatShop: không ack khi vào menu — chỉ đọc khi mở hội thoại
     notifications: "notifications"
   };
 
@@ -327,7 +490,10 @@
   }
 
   async function setView(view) {
-    if (view !== "chatSupport" && view !== "chatShop") setAdminChatLayout(false);
+    if (view === "shops" || view === "virtualShops" || view === "chatShop") {
+      view = "dashboard";
+    }
+    if (view !== "chatSupport") setAdminChatLayout(false);
     state.view = view;
     document.querySelectorAll(".adm-nav button").forEach((b) => {
       b.classList.toggle("active", b.dataset.view === view);
@@ -338,21 +504,20 @@
     const title = document.getElementById("admTitle");
     const sub = document.getElementById("admSub");
     const map = {
-      dashboard: ["Dashboard", "Theo dõi doanh thu, đơn hàng và hoạt động sàn Vua MMO"],
+      dashboard: ["Dashboard", "Theo dõi doanh thu, đơn proxy, ví và hoạt động Vua Proxy"],
       orders: [
         "Đơn hàng",
-        "Lọc theo trạng thái · tìm khách · giao / huỷ / hoàn tất đơn số"
+        "Lọc theo trạng thái · tìm khách · giao / huỷ / hoàn tất đơn proxy"
       ],
       disputes: [
         "Khiếu nại",
         "Admin cập nhật trạng thái xử lý khiếu nại đơn hàng tại đây"
       ],
-      products: ["Sản phẩm", "Ẩn/hiện catalog · ghi chú · gắn nhập kho nhanh"],
-      stock: ["Tồn kho", "Thêm / xoá dòng hàng giao tự động (1 dòng = 1 đơn vị)"],
-      shops: ["Gian hàng", "80 shop thật — chỉnh hồ sơ, bật/tắt hiển thị từng shop"],
-      virtualShops: [
-        "Shop ảo",
-        "Shop filler hiển thị khám phá — tách biệt 80 gian hàng thật"
+      products: ["Sản phẩm / Gói proxy", "Ẩn/hiện catalog · ghi chú · gắn nhập kho nhanh"],
+      stock: ["Tồn kho proxy", "Thêm / xoá dòng IP giao tự động (1 dòng = 1 đơn vị)"],
+      vpnPool: [
+        "Kho proxy",
+        "Chỉ thêm key. Khi khách mua, proxy tự mở đúng quốc gia và đúng số ngày trên đơn, rồi tự tắt khi hết hạn."
       ],
       promos: [
         "Khuyến mãi",
@@ -363,7 +528,7 @@
         "Gửi thông báo hệ thống tới tất cả khách / nhóm audience"
       ],
       blog: ["Blog / Viết bài", "Đồng bộ từ website · form SEO đầy đủ · publish lên Chia sẻ"],
-      users: ["Quản lý Users", "Danh sách tài khoản khách trên Vua MMO"],
+      users: ["Quản lý Users", "Danh sách tài khoản khách trên Vua Proxy"],
       blacklist: [
         "Blacklist",
         "User trong list bị chặn mua hàng. Gỡ blacklist để mở lại."
@@ -377,12 +542,8 @@
         "Lịch sử nạp PayOS · mua hàng · hoàn / điều chỉnh admin"
       ],
       chatSupport: [
-        "Chat Vua MMO ↔ Khách",
-        "Kênh hỗ trợ sàn — tách biệt hoàn toàn với chat shop"
-      ],
-      chatShop: [
-        "Chat Shop ↔ Khách",
-        "Mỗi shop một phòng chat riêng (80 phòng) — không lẫn sang support"
+        "Chat hỗ trợ ↔ Khách",
+        "Kênh hỗ trợ khách hàng Vua Proxy (đơn, nạp tiền, bảo hành proxy)"
       ]
     };
     const t = map[view] || ["Admin", ""];
@@ -452,8 +613,8 @@
 
   function loginHtml() {
     return (
-      '<div class="adm-login"><h1>Vua MMO Admin</h1>' +
-      "<p>Đăng nhập tài khoản quản trị để theo dõi đơn, ví, kho và chat.</p>" +
+      '<div class="adm-login"><h1>Vua Proxy Admin</h1>' +
+      "<p>Đăng nhập tài khoản quản trị để theo dõi đơn proxy, ví, kho IP và chat hỗ trợ.</p>" +
       '<form id="admLoginForm">' +
       "<label>Email</label><input name=\"email\" type=\"email\" required>" +
       "<label>Mật khẩu</label><input name=\"password\" type=\"password\" required>" +
@@ -491,25 +652,23 @@
     return (
       '<div class="adm-shell">' +
       '<aside class="adm-side">' +
-      '<div class="adm-brand"><img src="images/logo-vuammo.png" alt="">' +
-      "<div><strong>Vua MMO Admin</strong><span>Điều hành đơn, shop, ví &amp; chat</span></div></div>" +
+      '<div class="adm-brand"><img src="/images/logo-vuaproxy.png?v=20260915logo1" alt="Vua Proxy">' +
+      "<div><strong>Vua Proxy Admin</strong><span>Đơn proxy, ví, kho IP &amp; chat hỗ trợ</span></div></div>" +
       '<nav class="adm-nav">' +
       '<div class="adm-nav-label">Tổng quan</div>' +
       btn("dashboard", "Dashboard", "M3 12h18M3 6h18M3 18h18") +
       '<div class="adm-nav-label">Vận hành</div>' +
       btn("orders", "Đơn hàng", "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2") +
       btn("disputes", "Khiếu nại", "M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z") +
-      btn("products", "Sản phẩm", "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4") +
-      btn("stock", "Tồn kho", "M4 7h16M4 12h16M4 17h10") +
-      btn("shops", "Gian hàng", "M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6") +
-      btn("virtualShops", "Shop ảo", "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z") +
+      btn("products", "Sản phẩm / Gói proxy", "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4") +
+      btn("stock", "Tồn kho proxy", "M4 7h16M4 12h16M4 17h10") +
+      btn("vpnPool", "Kho proxy VPN", "M12 2a10 10 0 100 20 10 10 0 000-20zm0 6v4l3 2") +
       btn("promos", "Khuyến mãi", "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z") +
       btn("notifications", "Thông báo", "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9") +
       btn("blog", "Blog / Viết bài", "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z") +
       btn("blacklist", "Blacklist", "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636") +
       '<div class="adm-nav-label">Chat</div>' +
-      btn("chatSupport", "Chat Vua MMO ↔ Khách", "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z") +
-      btn("chatShop", "Chat Shop ↔ Khách", "M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-1") +
+      btn("chatSupport", "Chat hỗ trợ ↔ Khách", "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z") +
       '<div class="adm-nav-label">Tài chính &amp; Users</div>' +
       btn("users", "Quản lý Users", "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z") +
       btn("wallet", "Ví người dùng", "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z") +
@@ -552,8 +711,7 @@
       else if (state.view === "disputes") await renderDisputes(body);
       else if (state.view === "products") await renderProducts(body);
       else if (state.view === "stock") await renderStock(body);
-      else if (state.view === "shops") await renderShops(body);
-      else if (state.view === "virtualShops") await renderVirtualShops(body);
+      else if (state.view === "vpnPool") await renderVpnPool(body);
       else if (state.view === "promos") await renderPromos(body);
       else if (state.view === "notifications") await renderNotifications(body);
       else if (state.view === "blog") await renderBlog(body);
@@ -562,7 +720,6 @@
       else if (state.view === "wallet") await renderWallet(body);
       else if (state.view === "ledger") await renderLedger(body);
       else if (state.view === "chatSupport") await renderChatSupport(body);
-      else if (state.view === "chatShop") await renderChatShop(body);
     } catch (err) {
       body.innerHTML = '<p class="adm-muted">' + esc(err.message) + "</p>";
     }
@@ -581,49 +738,301 @@
     );
   }
 
+  async function renderVpnPool(body) {
+    const data = await api("/admin/vpn-pool");
+    const tab = state.vpnTab || "proxies";
+    const host = data.settings?.advertiseHost || "";
+    body.innerHTML =
+      '<div class="vpn-board">' +
+      '<div class="vpn-head"><div><strong>Kho proxy</strong>' +
+      "<span>Không dựng trước. Proxy mở lúc khách thanh toán, theo quốc gia và thời hạn của đơn.</span></div>" +
+      '<div class="vpn-host">IP máy <b>' +
+      esc(host || "chưa đặt") +
+      "</b></div>" +
+      '<button type="button" class="btn btn-primary" id="vpnAdd">Thêm cấu hình</button></div>' +
+      '<div class="vpn-tabs">' +
+      vpnTabBtn("proxies", "Proxy (" + (data.proxies || []).length + ")", tab) +
+      vpnTabBtn("logs", "Nhật ký", tab) +
+      vpnTabBtn("settings", "Cài đặt", tab) +
+      "</div>" +
+      (data.building ? '<p class="vpn-note">Đang dựng proxy… trang sẽ tự cập nhật.</p>' : "") +
+      (tab === "proxies" ? vpnProxyGrid(data) : "") +
+      (tab === "logs" ? vpnLogs(data) : "") +
+      (tab === "settings" ? vpnSettings(data) : "") +
+      "</div>";
+    body.querySelectorAll("[data-vpn-tab]").forEach((b) => {
+      b.addEventListener("click", () => {
+        state.vpnTab = b.getAttribute("data-vpn-tab");
+        render();
+      });
+    });
+    document.getElementById("vpnAdd")?.addEventListener("click", () => {
+      state.vpnTab = "settings";
+      render();
+    });
+    document.getElementById("vpnProbe")?.addEventListener("click", () => vpnAct("/admin/vpn-pool/probe", "POST"));
+    document.getElementById("vpnSaveHost")?.addEventListener("click", async () => {
+      try {
+        await api("/admin/vpn-pool/settings", {
+          method: "PUT",
+          body: JSON.stringify({
+            advertiseHost: document.getElementById("vpnHost").value,
+            portStart: document.getElementById("vpnPort").value
+          })
+        });
+        VuammoApi.showToast("Đã lưu IP máy");
+        render();
+      } catch (err) {
+        VuammoApi.showToast(err.message);
+      }
+    });
+    document.getElementById("vpnSourceForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await api("/admin/vpn-pool/sources", {
+          method: "POST",
+          body: JSON.stringify({
+            provider: fd.get("provider"),
+            secret: fd.get("secret"),
+            slots: fd.get("slots")
+          })
+        });
+        e.target.reset();
+        VuammoApi.showToast("Đã thêm key");
+        render();
+      } catch (err) {
+        VuammoApi.showToast(err.message);
+      }
+    });
+    body.querySelectorAll("[data-del-source]").forEach((b) => {
+      b.addEventListener("click", async () => {
+        if (!confirm("Xóa key này và các proxy chưa giữ?")) return;
+        try {
+          await api("/admin/vpn-pool/sources/" + b.getAttribute("data-del-source"), { method: "DELETE" });
+          render();
+        } catch (err) {
+          VuammoApi.showToast(err.message);
+        }
+      });
+    });
+    body.querySelectorAll("[data-copy]").forEach((b) => {
+      b.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(b.getAttribute("data-copy"));
+          VuammoApi.showToast("Đã chép");
+        } catch (_) {
+          VuammoApi.showToast(b.getAttribute("data-copy"));
+        }
+      });
+    });
+    if (data.building && state.view === "vpnPool") {
+      clearTimeout(state.vpnTimer);
+      state.vpnTimer = setTimeout(() => {
+        if (state.view === "vpnPool") render();
+      }, 4000);
+    }
+  }
+
+  function vpnTabBtn(id, label, current) {
+    return (
+      '<button type="button" data-vpn-tab="' +
+      id +
+      '" class="' +
+      (id === current ? "on" : "") +
+      '">' +
+      esc(label) +
+      "</button>"
+    );
+  }
+
+  function vpnProxyGrid(data) {
+    const rows = data.proxies || [];
+    if (!rows.length) {
+      return '<p class="vpn-empty">Chưa có proxy đang chạy. Thêm key ở Cài đặt. Cổng chỉ mở khi khách mua, đúng quốc gia và số ngày trên đơn.</p>';
+    }
+    return (
+      '<div class="vpn-grid">' +
+      rows
+        .map((p) => {
+          const place = [p.exitIp, p.location].filter(Boolean).join(" · ");
+          return (
+            '<article class="vpn-card">' +
+            "<header><b>" +
+            esc(p.endpoint) +
+            '</b><button type="button" data-copy="' +
+            esc(p.endpoint + ":" + p.user + ":" + p.pass) +
+            '" title="Chép">⎘</button></header>' +
+            "<p>" +
+            esc(place || "Đang dò IP") +
+            "</p>" +
+            '<span class="vpn-tag">' +
+            esc(p.label) +
+            "</span> " +
+            '<span class="vpn-tag ' +
+            esc(p.status) +
+            '">' +
+            esc(p.status === "assigned" ? "đã giao" : p.status === "up" ? "sống" : p.status) +
+            "</span></article>"
+          );
+        })
+        .join("") +
+      "</div>"
+    );
+  }
+
+  function vpnLogs(data) {
+    const rows = data.logs || [];
+    if (!rows.length) return '<p class="vpn-empty">Chưa có nhật ký.</p>';
+    return (
+      '<div class="vpn-logs">' +
+      rows
+        .map((row) => "<p class=\"" + esc(row.level) + '">' + esc(row.message) + "</p>")
+        .join("") +
+      "</div>"
+    );
+  }
+
+  function vpnSettings(data) {
+    const s = data.settings || {};
+    const options = (data.providers || [])
+      .map((p) => '<option value="' + esc(p.id) + '">' + esc(p.label) + "</option>")
+      .join("");
+    const sources = (data.sources || [])
+      .map(
+        (src) =>
+          "<li><b>" +
+          esc(src.label) +
+          "</b> · " +
+          esc(src.username || "key") +
+          " · " +
+          esc(String(src.slots)) +
+          " cổng cùng lúc · " +
+          esc(src.countries ? src.countries : "mọi quốc gia khách mua") +
+          ' <button type="button" data-del-source="' +
+          src.id +
+          '">Xóa</button></li>'
+      )
+      .join("");
+    return (
+      '<div class="vpn-settings">' +
+      "<p>Chỉ dán key, không dựng proxy trước. Khách mua nước nào, bao nhiêu ngày, hệ thống mở đúng cổng đó rồi tự tắt khi hết hạn. Mỗi key chịu tối đa 10 cổng đang chạy; khoảng 1000 cổng cùng lúc thì cần khoảng 100 key.</p>" +
+      '<div class="adm-filters">' +
+      '<div class="adm-field"><label>IP máy phát cho khách</label><input id="vpnHost" value="' +
+      esc(s.advertiseHost || "") +
+      '" placeholder="10.10.2.213"></div>' +
+      '<div class="adm-field"><label>Cổng bắt đầu</label><input id="vpnPort" type="number" value="' +
+      esc(String(s.portStart || 8284)) +
+      '"></div>' +
+      '<button type="button" class="btn btn-outline" id="vpnSaveHost">Lưu</button>' +
+      '<button type="button" class="btn btn-outline" id="vpnProbe">Dò lại IP</button></div>' +
+      '<form id="vpnSourceForm" class="adm-filters">' +
+      '<div class="adm-field"><label>VPN</label><select name="provider">' +
+      options +
+      "</select></div>" +
+      '<div class="adm-field"><label>Key</label><input name="secret" autocomplete="off" required placeholder="Dán key VPN"></div>' +
+      '<div class="adm-field"><label>Slot tối đa</label><input name="slots" type="number" min="1" max="10" value="10" title="Số cổng đang chạy cùng lúc trên key này, không phải số proxy tạo sẵn"></div>' +
+      '<button class="btn btn-primary" type="submit">Thêm key</button></form>' +
+      "<ul class=\"vpn-sources\">" +
+      (sources || "<li>Chưa có key.</li>") +
+      "</ul></div>"
+    );
+  }
+
+  async function vpnAct(path, method) {
+    try {
+      await api(path, { method });
+      VuammoApi.showToast("Đã gửi lệnh");
+      render();
+    } catch (err) {
+      VuammoApi.showToast(err.message);
+    }
+  }
+
   async function renderDashboard(body) {
-    const data = await api("/admin/dashboard");
+    const f = state.dashboard || { range: "all", from: "", to: "" };
+    const qs = new URLSearchParams({
+      range: f.range || "all",
+      from: f.from || "",
+      to: f.to || ""
+    });
+    const data = await api("/admin/dashboard?" + qs.toString());
     const s = data.stats;
+    const recent = (data.recentOrders || []).filter(
+      (o) => o && !["pending_payment", "expired"].includes(String(o.status || ""))
+    );
+    const usersLabel = s.usersIsNewInRange ? "Users mới" : "Users";
     body.innerHTML =
       (s.payosMock
         ? '<div class="adm-card"><span class="adm-tag warn">PayOS đang MOCK</span> — nạp tiền chưa thu thật. Cần gắn key PayOS live.</div>'
         : "") +
+      '<div class="adm-card"><div class="adm-filters">' +
+      '<div class="adm-range-btns" id="dashRange">' +
+      rangeBtn("all", "Mọi ngày", f.range) +
+      rangeBtn("today", "Hôm nay", f.range) +
+      rangeBtn("7d", "7 ngày", f.range) +
+      rangeBtn("30d", "30 ngày", f.range) +
+      "</div>" +
+      '<div class="adm-field"><label>Từ ngày</label><input type="date" id="dashFrom" value="' +
+      esc(f.from || "") +
+      '"></div>' +
+      '<div class="adm-field"><label>Đến ngày</label><input type="date" id="dashTo" value="' +
+      esc(f.to || "") +
+      '"></div>' +
+      '<button type="button" class="btn btn-primary" id="dashApply">Lọc</button>' +
+      "</div></div>" +
       '<div class="adm-grid">' +
       stat("Doanh thu đơn", money(s.orderRevenue)) +
       stat("Đã trừ ví (mua)", money(s.purchaseVolume), "neg") +
       stat("Đã nạp ví", money(s.topupVolume), "pos") +
       stat("Đơn hàng", s.orders) +
-      stat("Users", s.users) +
+      stat(usersLabel, s.users) +
       stat("Tồn kho còn", s.stockAvailable) +
       stat("Khiếu nại mở", s.openDisputes, s.openDisputes ? "warn" : "") +
       "</div>" +
       '<div class="adm-card"><div class="adm-card-head"><h2>Đơn gần đây</h2>' +
       '<button type="button" class="btn btn-outline btn-sm" id="goOrders">Xem tất cả</button></div>' +
       '<div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
-      "<th>Mã</th><th>Khách</th><th>Sản phẩm</th><th>Giá</th><th>Trạng thái</th><th>Ngày</th>" +
+      "<th>Khách</th><th>Quốc gia</th><th>Sản phẩm</th><th>Giá</th><th>Trạng thái</th>" +
       "</tr></thead><tbody>" +
-      (data.recentOrders || [])
-        .map((o) => {
-          const items = (o.items || []).map((i) => i.name).join(", ");
-          return (
-            "<tr><td>#" +
-            esc(o.code || String(o.id).slice(0, 8)) +
-            '</td><td><span class="adm-cell-main">' +
-            esc((o.items && o.items[0] && shopOfItem(o.items[0])) || "—") +
-            "</span></td><td>" +
-            esc(items) +
-            "</td><td>" +
-            money(o.total) +
-            "</td><td>" +
-            statusTag(o.status) +
-            "</td><td>" +
-            fmtTime(o.createdAt) +
-            "</td></tr>"
-          );
-        })
-        .join("") +
+      (recent.length
+        ? recent
+            .map((o) => {
+              const items = (o.items || []).map((i) => i.name).join(", ");
+              return (
+                '<tr><td><span class="adm-cell-main">' +
+                esc(o.buyerName || o.buyerEmail || "—") +
+                '</span><span class="adm-cell-sub">' +
+                esc(o.buyerEmail || "") +
+                "</span></td><td>" +
+                esc(countriesOfOrder(o)) +
+                "</td><td>" +
+                esc(items) +
+                "</td><td>" +
+                money(o.total) +
+                "</td><td>" +
+                orderStatusTag(o) +
+                "</td></tr>"
+              );
+            })
+            .join("")
+        : '<tr><td colspan="5" class="adm-empty">Không có đơn trong khoảng đã chọn</td></tr>') +
       "</tbody></table></div></div>";
     document.getElementById("goOrders")?.addEventListener("click", () => setView("orders"));
+    document.getElementById("dashRange")?.querySelectorAll("button").forEach((b) => {
+      b.addEventListener("click", () => {
+        state.dashboard.range = b.getAttribute("data-r");
+        state.dashboard.from = "";
+        state.dashboard.to = "";
+        renderDashboard(body);
+      });
+    });
+    document.getElementById("dashApply")?.addEventListener("click", () => {
+      state.dashboard.from = document.getElementById("dashFrom").value;
+      state.dashboard.to = document.getElementById("dashTo").value;
+      if (state.dashboard.from || state.dashboard.to) state.dashboard.range = "all";
+      renderDashboard(body);
+    });
   }
 
   async function renderOrders(body) {
@@ -638,7 +1047,7 @@
     });
     const data = await api("/admin/orders?" + qs.toString());
     const c = data.counts || {};
-    const pills = ["all", "paid", "delivered", "disputed", "released", "refunded"]
+    const pills = ["all", "waiting", "done", "disputed"]
       .map((st) => {
         const n = c[st] != null ? c[st] : st === "all" ? c.all || 0 : 0;
         return (
@@ -656,7 +1065,7 @@
       .join("");
 
     body.innerHTML =
-      '<div class="adm-hint">Đơn số giao tự động từ kho. Dùng <b>Hoàn tất</b> khi hết hold, <b>Hoàn tiền</b> để trả ví khách.</div>' +
+      '<div class="adm-hint">Ẩn đơn chưa thanh toán. <b>Chờ hoàn thành</b> = còn hiệu lực gói (có thể khiếu nại) · <b>Hoàn thành</b> = hết hạn · <b>Hoàn tất</b> (nút) kết thúc sớm · <b>Hoàn tiền</b> trả ví khách.</div>' +
       '<div class="adm-pills" id="ordPills">' +
       pills +
       "</div>" +
@@ -679,16 +1088,19 @@
       '<button type="button" class="btn btn-primary" id="ordApply">Lọc</button>' +
       "</div></div>" +
       '<div class="adm-card"><div class="adm-table-wrap"><table class="adm-table"><thead><tr>' +
-      "<th>ID</th><th>Khách</th><th>Shop</th><th>Sản phẩm</th><th>Giá</th><th>Trạng thái</th><th>Ngày</th><th></th>" +
+      "<th>ID</th><th>Khách</th><th>Quốc gia</th><th>Sản phẩm / Gói</th><th>Giá</th><th>Trạng thái</th><th>Ngày</th><th></th>" +
       "</tr></thead><tbody>" +
       (data.orders || [])
         .map((o) => {
-          const shops = [
-            ...new Set((o.items || []).map((i) => shopOfItem(i)).filter(Boolean))
-          ].join(", ");
+          const countries = countriesOfOrder(o);
           const items = (o.items || []).map((i) => esc(i.name) + " ×" + i.qty).join("<br>");
-          const canDone = o.status === "delivered" || o.status === "paid";
+          const canDone = orderUiKey(o) === "waiting";
           const canCancel = o.status !== "refunded" && o.status !== "released";
+          const canWarranty =
+            o.status !== "pending_payment" &&
+            o.status !== "expired" &&
+            o.status !== "refunded";
+          const whCount = Math.max(0, Number(o.warrantyCount) || 0);
           return (
             '<tr data-id="' +
             o.id +
@@ -699,13 +1111,13 @@
             '</span><span class="adm-cell-sub">' +
             esc(o.buyerEmail) +
             "</span></td><td>" +
-            esc(shops || "—") +
+            esc(countries) +
             "</td><td>" +
             items +
             "</td><td><b>" +
             money(o.total) +
             "</b></td><td>" +
-            statusTag(o.status) +
+            orderStatusTag(o) +
             (o.dispute && o.dispute.status === "open"
               ? '<div class="adm-tag bad" style="margin-top:4px">KN: ' +
                 esc(o.dispute.reason || "") +
@@ -713,16 +1125,23 @@
               : o.dispute && o.dispute.status === "rejected" && o.status !== "refunded"
                 ? '<div class="adm-tag bad" style="margin-top:4px">Từ chối KN</div>'
                 : "") +
+            (whCount
+              ? '<div class="adm-tag info" style="margin-top:4px">BH ×' + whCount + "</div>"
+              : "") +
             "</td><td>" +
             fmtTime(o.createdAt) +
-            '</td><td><div class="adm-row-actions">' +
+            '</td><td><div class="adm-row-actions adm-row-actions--orders">' +
             '<button type="button" class="btn btn-outline btn-sm js-detail">Chi tiết</button>' +
+            '<button type="button" class="btn btn-primary btn-sm js-chat">Chat</button>' +
+            (canWarranty
+              ? '<button type="button" class="btn btn-outline btn-sm js-warranty adm-btn-warranty">Bảo hành</button>'
+              : '<span class="adm-row-slot" aria-hidden="true"></span>') +
             (canCancel
               ? '<button type="button" class="btn btn-danger btn-sm js-cancel">Hoàn tiền</button>'
-              : "") +
+              : '<span class="adm-row-slot" aria-hidden="true"></span>') +
             (canDone
               ? '<button type="button" class="btn btn-ok btn-sm js-done">Hoàn tất</button>'
-              : "") +
+              : '<span class="adm-row-slot" aria-hidden="true"></span>') +
             "</div></td></tr>"
           );
         })
@@ -764,11 +1183,12 @@
           : o.deliveryNote || "(chưa có payload)";
         alert(
           "Đơn #" +
-            id +
+            (o.code || id) +
             "\nKhách: " +
             o.buyerEmail +
             "\nTT: " +
-            o.status +
+            orderUiLabel(o) +
+            (o.holdUntil ? "\nHiệu lực đến: " + new Date(o.holdUntil).toLocaleString("vi-VN") : "") +
             "\nTổng: " +
             money(o.total) +
             "\n\nGiao hàng:\n" +
@@ -776,9 +1196,26 @@
         );
       });
     });
+    body.querySelectorAll(".js-chat").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.closest("tr").getAttribute("data-id");
+        const o = (data.orders || []).find((x) => String(x.id) === String(id));
+        if (!o) return toast("Không tìm thấy đơn");
+        openSupportChatForOrder(o);
+      });
+    });
+    body.querySelectorAll(".js-warranty").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.closest("tr").getAttribute("data-id");
+        const o = (data.orders || []).find((x) => String(x.id) === String(id));
+        if (!o) return toast("Không tìm thấy đơn");
+        const ok = await openWarrantyModal(o);
+        if (ok) renderOrders(body);
+      });
+    });
     body.querySelectorAll(".js-cancel").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        if (!confirm("Hoàn tiền đơn này về ví khách?")) return;
+        if (!(await confirmAction({ title: "Hoàn tiền đơn hàng", message: "Số tiền đơn sẽ được cộng lại vào ví khách. Thao tác không hoàn tác được.", okText: "Hoàn tiền" }))) return;
         const id = btn.closest("tr").getAttribute("data-id");
         const res = await api("/admin/orders/" + id, {
           method: "PATCH",
@@ -799,6 +1236,160 @@
         toast("Đã hoàn tất đơn");
         renderOrders(body);
       });
+    });
+  }
+
+  function openWarrantyModal(order) {
+    return new Promise((resolve) => {
+      const prev = document.getElementById("admWarrantyModal");
+      if (prev) prev.remove();
+      const items = Array.isArray(order.items) ? order.items : [];
+      const delivery = Array.isArray(order.delivery) ? order.delivery : [];
+      const nextSeq = Math.max(0, Number(order.warrantyCount) || 0) + 1;
+      const previewCode = (order.code || "ORDER") + "-BH" + nextSeq;
+      const deliveryPreview = delivery.length
+        ? delivery
+            .map((d) => {
+              const lines = (d.lines || []).filter(Boolean);
+              return (
+                "<div class=\"adm-field\" style=\"margin:0 0 10px\">" +
+                "<label style=\"margin:0 0 4px\">" +
+                esc(d.name || d.productId || "Sản phẩm") +
+                " ×" +
+                esc(d.qty || 1) +
+                "</label>" +
+                '<pre style="margin:0;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;white-space:pre-wrap;max-height:140px;overflow:auto">' +
+                esc(lines.join("\n") || "(không có payload)") +
+                "</pre></div>"
+              );
+            })
+            .join("")
+        : '<p class="adm-muted">Chưa có payload giao hàng gốc — vẫn có thể bảo hành từ tồn kho theo sản phẩm đơn.</p>';
+
+      const qtyRows = items.length
+        ? items
+            .map((it, idx) => {
+              const rawPid = String(it.productId || it.product_id || "").trim();
+              const rawId = String(it.id || "").trim();
+              const pid =
+                rawPid && !/^(lcp-|manual-|proxy-loc-)/i.test(rawPid)
+                  ? rawPid
+                  : rawPid || rawId;
+              const maxQ = Math.max(1, Math.round(Number(it.qty) || 1));
+              return (
+                '<div class="adm-field" style="margin:0 0 10px">' +
+                "<label>" +
+                esc(it.name || pid) +
+                " <span class=\"cnt\">tối đa " +
+                maxQ +
+                "</span></label>" +
+                '<input type="number" min="0" max="' +
+                maxQ +
+                '" value="' +
+                maxQ +
+                '" data-wh-idx="' +
+                idx +
+                '" data-product-id="' +
+                esc(pid) +
+                '" data-line-id="' +
+                esc(rawId) +
+                '" data-name="' +
+                esc(it.name || pid) +
+                '" data-country="' +
+                esc(it.countryCode || it.country_code || "") +
+                '" data-package="' +
+                esc(it.packageKey || it.package_key || "") +
+                '" data-max="' +
+                maxQ +
+                '"></div>'
+              );
+            })
+            .join("")
+        : '<p class="adm-muted">Đơn không có dòng sản phẩm.</p>';
+
+      const wrap = document.createElement("div");
+      wrap.id = "admWarrantyModal";
+      wrap.className = "adm-modal-bg";
+      wrap.innerHTML =
+        '<div class="adm-modal adm-modal--wide" role="dialog" aria-modal="true">' +
+        "<h3>Bảo hành đơn #" +
+        esc(order.code || "") +
+        "</h3>" +
+        '<p style="margin:0 0 12px">Mã bảo hành lần này: <b>' +
+        esc(previewCode) +
+        "</b>. Hệ thống lấy hàng còn trong tồn kho và gửi vào chat khách.</p>" +
+        '<div style="margin-bottom:14px"><div style="font-size:12.5px;font-weight:700;color:#334155;margin-bottom:6px">Sản phẩm đã gửi trước đó</div>' +
+        deliveryPreview +
+        "</div>" +
+        '<div style="margin-bottom:8px"><div style="font-size:12.5px;font-weight:700;color:#334155;margin-bottom:6px">Số lượng bảo hành</div>' +
+        qtyRows +
+        "</div>" +
+        '<div class="adm-compose-actions">' +
+        '<button type="button" class="btn btn-outline" data-c="0">Huỷ</button>' +
+        '<button type="button" class="btn btn-primary" data-c="1">Bảo hành &amp; gửi hàng</button>' +
+        "</div></div>";
+      document.body.appendChild(wrap);
+
+      const finish = (ok) => {
+        wrap.remove();
+        resolve(!!ok);
+      };
+      wrap.addEventListener("click", (e) => {
+        if (e.target === wrap) finish(false);
+      });
+      wrap.querySelector('[data-c="0"]').addEventListener("click", () => finish(false));
+      wrap.querySelector('[data-c="1"]').addEventListener("click", async () => {
+        const payloadItems = [];
+        let qtyError = "";
+        wrap.querySelectorAll("input[data-wh-idx]").forEach((inp) => {
+          const qty = Math.max(0, Math.round(Number(inp.value) || 0));
+          const maxQ = Math.max(1, Number(inp.getAttribute("data-max") || 1));
+          if (qty < 1) return;
+          if (qty > maxQ) {
+            qtyError = "Số lượng không được vượt " + maxQ;
+            return;
+          }
+          payloadItems.push({
+            productId: inp.getAttribute("data-product-id") || "",
+            id: inp.getAttribute("data-line-id") || "",
+            name: inp.getAttribute("data-name") || "",
+            countryCode: inp.getAttribute("data-country") || "",
+            packageKey: inp.getAttribute("data-package") || "",
+            qty
+          });
+        });
+        if (qtyError) return toast(qtyError);
+        if (!payloadItems.length) return toast("Chọn ít nhất 1 sản phẩm / số lượng > 0");
+        const btnOk = wrap.querySelector('[data-c="1"]');
+        if (btnOk) {
+          btnOk.disabled = true;
+          btnOk.textContent = "Đang gửi…";
+        }
+        try {
+          const res = await api("/admin/orders/" + order.id + "/warranty", {
+            method: "POST",
+            body: JSON.stringify({ items: payloadItems })
+          });
+          toast("Đã bảo hành #" + (res.warrantyCode || previewCode) + " — đã gửi chat khách");
+          finish(true);
+        } catch (e) {
+          toast(e.message || "Bảo hành lỗi");
+          if (btnOk) {
+            btnOk.disabled = false;
+            btnOk.textContent = "Bảo hành & gửi hàng";
+          }
+        }
+      });
+      document.addEventListener(
+        "keydown",
+        function onKey(e) {
+          if (e.key === "Escape") {
+            document.removeEventListener("keydown", onKey);
+            finish(false);
+          }
+        },
+        { once: true }
+      );
     });
   }
 
@@ -890,7 +1481,7 @@
     });
     body.querySelectorAll(".js-res").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        if (!confirm("Hoàn tiền khiếu nại này về ví khách?")) return;
+        if (!(await confirmAction({ title: "Hoàn tiền khiếu nại", message: "Sẽ hoàn tiền về ví khách và đánh dấu khiếu nại đã xử lý.", okText: "Hoàn tiền" }))) return;
         const res = await api("/admin/disputes/" + btn.closest("tr").getAttribute("data-id"), {
           method: "PATCH",
           body: JSON.stringify({ status: "resolved" })
@@ -902,7 +1493,7 @@
     });
     body.querySelectorAll(".js-rej").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        if (!confirm("Từ chối khiếu nại? Trạng thái sẽ là Từ chối KN (không hoàn tiền).")) return;
+        if (!(await confirmAction({ title: "Từ chối khiếu nại", message: "Khiếu nại sẽ chuyển sang Từ chối KN. Không hoàn tiền cho khách.", okText: "Từ chối" }))) return;
         await api("/admin/disputes/" + btn.closest("tr").getAttribute("data-id"), {
           method: "PATCH",
           body: JSON.stringify({ status: "rejected" })
@@ -914,11 +1505,21 @@
   }
 
   async function renderProducts(body) {
-    const overrides = await api("/admin/products");
+    const locations = window.VUAPROXY_LOCATIONS || [];
+    const packFn =
+      typeof window.VUAPROXY_allCountryPackages === "function"
+        ? window.VUAPROXY_allCountryPackages
+        : null;
+    let catalog = packFn
+      ? packFn(locations)
+      : getCatalogProducts().filter((p) => p && p.countryCode);
+
+    const overrides = await api("/admin/products").catch(() => ({ overrides: [] }));
     const map = {};
     (overrides.overrides || []).forEach((o) => {
-      map[o.product_id] = o;
+      map[String(o.product_id)] = o;
     });
+
     let cmsProducts = [];
     try {
       const cmsData = await api("/admin/cms-products");
@@ -928,70 +1529,69 @@
     } catch (_) {
       cmsProducts = [];
     }
-    const catalog = getCatalogProducts().filter(
-      (p) => !(typeof isBlockedProduct === "function" && isBlockedProduct(p))
-    );
-    if (!catalog.length && !cmsProducts.length) {
-      body.innerHTML =
-        '<div class="adm-card"><span class="adm-tag bad">Lỗi tải catalog</span> Không đọc được <code>js/products-data.js</code>. Hard refresh (Ctrl+F5) hoặc kiểm tra file trên server.</div>';
-      return;
-    }
+
     const cmsIds = new Set(cmsProducts.map((p) => String(p.id)));
     const products = cmsProducts.concat(
-      catalog
-        .filter((p) => !cmsIds.has(String(p.id)))
-        .map((p) => Object.assign({}, p, { source: p.source || "catalog" }))
+      catalog.filter((p) => !cmsIds.has(String(p.id)))
     );
-    const sellers = [
-      ...new Set(products.map((p) => p.seller).filter(Boolean))
-    ].sort();
+
+    if (!products.length) {
+      body.innerHTML =
+        '<div class="adm-card"><span class="adm-tag bad">Chưa có gói</span> Thiếu locations/proxy-packages.</div>';
+      return;
+    }
+
+    const countries = locations
+      .slice()
+      .sort((a, b) =>
+        String(a.nameVi || a.name).localeCompare(String(b.nameVi || b.name), "vi")
+      );
 
     body.innerHTML =
-      '<div class="adm-card"><div class="adm-card-head"><h2>Sản phẩm</h2>' +
-      '<button type="button" class="btn btn-primary" id="prodNew">Sản phẩm mới</button></div>' +
+      '<div class="adm-hint">Mỗi dòng là <b>sản phẩm đặt hàng được</b>. Tên gói luôn có <b>quốc gia</b>. Dùng <b>Mua</b> để mở trang sản phẩm / tạo đơn như khách.</div>' +
+      '<div class="adm-grid">' +
+      stat("Quốc gia", countries.length) +
+      stat("Gói hiển thị", products.filter((p) => {
+        const ov = map[String(p.id)] || {};
+        return ov.active !== false && p.active !== false;
+      }).length) +
+      stat("Tổng gói", products.length) +
+      "</div>" +
+      '<div class="adm-card"><div class="adm-card-head"><h2>Gói proxy theo quốc gia</h2>' +
+      '<button type="button" class="btn btn-primary" id="prodNew">Thêm gói mới</button></div>' +
       '<div id="prodCompose" class="hidden adm-compose">' +
-      "<h3>Sản phẩm mới</h3>" +
-      '<div class="adm-field"><label>Tên *</label><input id="npName" placeholder="Tên sản phẩm"></div>' +
-      '<div class="adm-field"><label>Slug (auto)</label><input id="npSlug" placeholder="tu-dong-tu-ten"></div>' +
-      '<div class="adm-field"><label>ID (tuỳ chọn)</label><input id="npId" placeholder="Để trống = tự sinh"></div>' +
-      '<div class="adm-field"><label>Giá bán ₫ *</label><input id="npPrice" type="number" min="0" step="1000"></div>' +
-      '<div class="adm-field"><label>Giá gốc ₫</label><input id="npRegular" type="number" min="0" step="1000"></div>' +
-      '<div class="adm-field"><label>Ảnh (URL)</label><input id="npImage" placeholder="https://… hoặc /uploads/…"></div>' +
-      '<div class="adm-field"><label>Upload ảnh</label><div class="adm-file-row">' +
-      '<input type="file" id="npImageFile" accept="image/*">' +
-      '<button type="button" class="btn btn-outline btn-sm" id="npImageUp">Upload</button></div>' +
-      '<img id="npImagePreview" class="adm-preview-img hidden" alt=""></div>' +
-      '<div class="adm-field"><label>Seller</label><input id="npSeller" placeholder="Tên gian hàng"></div>' +
-      '<div class="adm-field"><label>Seller token</label><input id="npSellerToken" placeholder="token shop"></div>' +
-      '<div class="adm-field"><label>Cats (phẩy)</label><input id="npCats" placeholder="ai, tool, account"></div>' +
-      '<div class="adm-field"><label>Mô tả</label><textarea id="npDesc" rows="4"></textarea></div>' +
-      '<div class="adm-field"><label>SEO title <span class="cnt" id="npMetaTitleCnt">0/60</span></label>' +
-      '<input id="npMetaTitle" maxlength="70"></div>' +
-      '<div class="adm-field"><label>Meta description <span class="cnt" id="npMetaDescCnt">0/155</span></label>' +
-      '<textarea id="npMetaDesc" rows="2"></textarea></div>' +
-      '<div class="adm-field"><label>Stock (hiển thị)</label><input id="npStock" type="number" value="100" min="0"></div>' +
+      "<h3 id=\"prodComposeTitle\">Thêm gói mới</h3>" +
+      '<input type="hidden" id="npEditId" value="">' +
+      '<div class="adm-field"><label>Quốc gia *</label><select id="npCountry">' +
+      countries
+        .map(
+          (c) =>
+            '<option value="' +
+            esc(c.code) +
+            '">' +
+            esc((c.nameVi || c.name) + " (" + c.code.toUpperCase() + ")") +
+            "</option>"
+        )
+        .join("") +
+      "</select></div>" +
+      '<div class="adm-field"><label>Tên gói (có quốc gia) *</label><input id="npName" placeholder="VD: Proxy dân cư tĩnh Private · Mỹ"></div>' +
+      '<div class="adm-field"><label>Giá / 30 ngày ₫ *</label><input id="npPrice" type="number" min="0" step="1000" value="10000"></div>' +
+      '<div class="adm-field"><label>Ghi chú</label><input id="npNote" placeholder="Share3/Share5, pack…"></div>' +
+      '<div class="adm-field"><label>Ảnh (mặc định = cờ quốc gia)</label><input id="npImage" placeholder="/images/flags/us.png"></div>' +
       '<div class="adm-compose-actions">' +
-      '<button type="button" class="btn btn-primary" id="npSave">Lưu sản phẩm</button>' +
-      '<button type="button" class="btn btn-outline" id="npCancel">Huỷ</button></div></div></div>' +
-      '<div class="adm-card"><h2>Chỉnh sản phẩm (override)</h2>' +
-      '<div class="adm-form-grid">' +
-      '<div class="adm-field"><label>ID sản phẩm</label><input id="pId" placeholder="VD 1189"></div>' +
-      '<div class="adm-field"><label>Tên hiển thị (tuỳ chọn)</label><input id="pName"></div>' +
-      '<div class="adm-field"><label>Giá mới ₫ (tuỳ chọn)</label><input id="pPrice" type="number"></div>' +
-      '<div class="adm-field span2"><label>Ghi chú nội bộ</label><input id="pNote" placeholder="VD hết hàng nhà cung cấp"></div>' +
-      '<div class="adm-field"><label>&nbsp;</label><button type="button" class="btn btn-primary" id="pSave" style="width:100%">Lưu override</button></div>' +
-      "</div></div>" +
-      '<div class="adm-card"><div class="adm-card-head"><h2>Catalog (' +
-      products.length +
-      " SP · CMS " +
-      cmsProducts.length +
-      ")</h2></div>" +
+      '<button type="button" class="btn btn-primary" id="npSave">Lưu</button>' +
+      '<button type="button" class="btn btn-outline" id="npCancel">Huỷ</button></div></div>' +
       '<div class="adm-filters">' +
-      '<input class="adm-search" id="prodFilter" placeholder="Lọc tên / id / shop…">' +
+      '<input class="adm-search" id="prodFilter" placeholder="Lọc tên gói / quốc gia / id…">' +
       filterSelect(
-        "prodShop",
-        "Shop",
-        [{ v: "all", t: "Mọi shop" }].concat(sellers.map((s) => ({ v: s, t: s }))),
+        "prodCountry",
+        "Quốc gia",
+        [{ v: "all", t: "Mọi quốc gia" }].concat(
+          countries.map((c) => ({
+            v: c.code,
+            t: (c.nameVi || c.name) + " (" + c.code.toUpperCase() + ")"
+          }))
+        ),
         "all"
       ) +
       filterSelect(
@@ -1007,173 +1607,251 @@
       '<button type="button" class="btn btn-outline" id="prodApply">Lọc</button></div>' +
       '<p class="adm-muted" id="prodCount" style="margin:10px 0"></p>' +
       '<div class="adm-table-wrap"><table class="adm-table" id="prodTable"><thead><tr>' +
-      "<th>ID</th><th>Tên</th><th>Giá</th><th>Shop</th><th>Nguồn</th><th>Hiển thị</th><th></th>" +
+      "<th>ID</th><th>Quốc gia</th><th>Tên gói (có quốc gia)</th><th>Giá / 30 ngày</th><th>TT</th><th></th>" +
       "</tr></thead><tbody></tbody></table></div></div>";
 
     const compose = document.getElementById("prodCompose");
-    let slugManual = false;
-    document.getElementById("prodNew")?.addEventListener("click", () => {
+    const openCompose = (row) => {
       compose.classList.remove("hidden");
-      slugManual = false;
-      compose.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-    document.getElementById("npCancel")?.addEventListener("click", () => {
-      compose.classList.add("hidden");
-    });
-    document.getElementById("npName")?.addEventListener("input", () => {
-      if (slugManual) return;
-      document.getElementById("npSlug").value = slugifyText(
-        document.getElementById("npName").value
-      );
-    });
-    document.getElementById("npSlug")?.addEventListener("input", () => {
-      slugManual = true;
-    });
-    wireSeoCounter("npMetaTitle", "npMetaTitleCnt", 60);
-    wireSeoCounter("npMetaDesc", "npMetaDescCnt", 155);
-    const syncNpPreview = () => {
-      const url = document.getElementById("npImage")?.value.trim();
-      const img = document.getElementById("npImagePreview");
-      if (!img) return;
-      if (url) {
-        img.src = url;
-        img.classList.remove("hidden");
-      } else img.classList.add("hidden");
-    };
-    document.getElementById("npImage")?.addEventListener("input", syncNpPreview);
-    document.getElementById("npImageUp")?.addEventListener("click", async () => {
-      const file = document.getElementById("npImageFile")?.files?.[0];
-      if (!file) return toast("Chọn file ảnh");
-      try {
-        const url = await uploadAdminFile(file);
-        document.getElementById("npImage").value = url;
-        syncNpPreview();
-        toast("Đã upload ảnh");
-      } catch (e) {
-        toast(e.message || "Upload lỗi");
+      document.getElementById("prodComposeTitle").textContent = row
+        ? "Sửa gói"
+        : "Thêm gói mới";
+      document.getElementById("npEditId").value = row ? String(row.id) : "";
+      if (row) {
+        if (row.countryCode) document.getElementById("npCountry").value = row.countryCode;
+        document.getElementById("npName").value = row.name || "";
+        document.getElementById("npPrice").value = String(
+          (map[String(row.id)] && map[String(row.id)].price_cents != null
+            ? map[String(row.id)].price_cents
+            : row.price) || 0
+        );
+        document.getElementById("npNote").value = row.note || "";
+        document.getElementById("npImage").value = row.image || "";
+      } else {
+        document.getElementById("npName").value = "";
+        document.getElementById("npPrice").value = "10000";
+        document.getElementById("npNote").value = "";
+        document.getElementById("npImage").value = "";
+        syncNameFromCountry();
       }
-    });
-    document.getElementById("npSave")?.addEventListener("click", async () => {
-      const name = document.getElementById("npName").value.trim();
-      if (!name) return toast("Nhập tên sản phẩm");
-      const price = Number(document.getElementById("npPrice").value || 0);
-      const regularRaw = document.getElementById("npRegular").value;
-      const payload = {
-        name,
-        slug: document.getElementById("npSlug").value.trim() || slugifyText(name),
-        id: document.getElementById("npId").value.trim() || undefined,
-        price,
-        regular: regularRaw === "" ? price : Number(regularRaw),
-        image: document.getElementById("npImage").value.trim(),
-        seller: document.getElementById("npSeller").value.trim(),
-        sellerToken: document.getElementById("npSellerToken").value.trim(),
-        catsText: document.getElementById("npCats").value.trim(),
-        description: document.getElementById("npDesc").value.trim(),
-        metaTitle: document.getElementById("npMetaTitle").value.trim(),
-        metaDescription: document.getElementById("npMetaDesc").value.trim(),
-        stock: Number(document.getElementById("npStock").value || 100)
-      };
-      await api("/admin/cms-products", {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      toast("Đã tạo sản phẩm CMS");
-      renderProducts(body);
-    });
+      compose.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
 
-    document.getElementById("pSave")?.addEventListener("click", async () => {
-      const id = document.getElementById("pId").value.trim();
-      if (!id) return toast("Nhập ID sản phẩm");
-      const priceRaw = document.getElementById("pPrice").value;
-      await api("/admin/products/" + encodeURIComponent(id), {
-        method: "PUT",
-        body: JSON.stringify({
-          productId: id,
-          name: document.getElementById("pName").value.trim() || null,
-          price: priceRaw === "" ? null : Number(priceRaw),
-          note: document.getElementById("pNote").value.trim(),
-          active: true
-        })
-      });
-      toast("Đã lưu sản phẩm");
+    function syncNameFromCountry() {
+      const code = document.getElementById("npCountry").value;
+      const c = countries.find((x) => x.code === code);
+      const label = c ? c.nameVi || c.name : code;
+      const cur = document.getElementById("npName").value.trim();
+      if (!cur || /·/.test(cur) === false) {
+        document.getElementById("npName").value = "Proxy dân cư tĩnh Private · " + label;
+      } else {
+        document.getElementById("npName").value = cur.replace(/\s·\s.*$/, " · " + label);
+      }
+      document.getElementById("npImage").value = "/images/flags/" + code + ".png";
+    }
+
+    document.getElementById("prodNew")?.addEventListener("click", () => openCompose(null));
+    document.getElementById("npCancel")?.addEventListener("click", () =>
+      compose.classList.add("hidden")
+    );
+    document.getElementById("npCountry")?.addEventListener("change", syncNameFromCountry);
+
+    document.getElementById("npSave")?.addEventListener("click", async () => {
+      const code = document.getElementById("npCountry").value;
+      const c = countries.find((x) => x.code === code);
+      const label = c ? c.nameVi || c.name : code;
+      let name = document.getElementById("npName").value.trim();
+      if (!name) return toast("Nhập tên gói");
+      if (!name.includes(label) && !name.includes(code.toUpperCase())) {
+        name = name.replace(/\s·\s.*$/, "") + " · " + label;
+      }
+      const price = Number(document.getElementById("npPrice").value || 0);
+      if (price <= 0) return toast("Giá phải > 0");
+      const editId = document.getElementById("npEditId").value.trim();
+      const image =
+        document.getElementById("npImage").value.trim() ||
+        "/images/flags/" + code + ".png";
+      const note = document.getElementById("npNote").value.trim();
+
+      if (editId && !cmsIds.has(editId) && catalog.some((p) => String(p.id) === editId)) {
+        await api("/admin/products/" + encodeURIComponent(editId), {
+          method: "PUT",
+          body: JSON.stringify({
+            productId: editId,
+            name: name,
+            price: price,
+            note: note,
+            active: true
+          })
+        });
+        toast("Đã cập nhật gói catalog");
+      } else {
+        await api("/admin/cms-products", {
+          method: "POST",
+          body: JSON.stringify({
+            id: editId || undefined,
+            name,
+            price,
+            image,
+            seller: "Vua Proxy",
+            sellerSlug: "vuaproxy",
+            sellerToken: "vuaproxy",
+            catsText: "proxy," + code + ",custom",
+            description: note || name,
+            stock: 999
+          })
+        });
+        toast(editId ? "Đã lưu gói CMS" : "Đã thêm gói mới");
+      }
       renderProducts(body);
     });
 
     const tbody = body.querySelector("#prodTable tbody");
     function paint() {
       const needle = String(document.getElementById("prodFilter")?.value || "").toLowerCase();
-      const shopF = document.getElementById("prodShop")?.value || "all";
+      const cF = document.getElementById("prodCountry")?.value || "all";
       const actF = document.getElementById("prodActive")?.value || "all";
       const filtered = products.filter((p) => {
         const ov = map[String(p.id)] || {};
         const active = ov.active !== false && p.active !== false;
-        if (shopF !== "all" && String(p.seller || "") !== shopF) return false;
+        const code = p.countryCode || (Array.isArray(p.cats) ? p.cats.find((x) => /^[a-z]{2}$/.test(x)) : "");
+        if (cF !== "all" && code !== cF) return false;
         if (actF === "on" && !active) return false;
         if (actF === "off" && active) return false;
         if (!needle) return true;
+        const name = ov.name || p.name || "";
         return (
           String(p.id).includes(needle) ||
-          String(p.name || "").toLowerCase().includes(needle) ||
-          String(p.seller || "").toLowerCase().includes(needle)
+          String(code).includes(needle) ||
+          String(name).toLowerCase().includes(needle) ||
+          String(p.countryName || "").toLowerCase().includes(needle)
         );
       });
       const countEl = document.getElementById("prodCount");
       if (countEl) {
         countEl.textContent =
-          "Hiển thị " + filtered.length + " / " + products.length + " sản phẩm";
+          "Hiển thị " + filtered.length + " / " + products.length + " gói";
       }
-      tbody.innerHTML =
-        (filtered.length
-          ? filtered
-              .map((p) => {
-                const ov = map[String(p.id)] || {};
-                const active = ov.active !== false && p.active !== false;
-                const price = ov.price_cents != null ? Number(ov.price_cents) : p.price;
-                const isCms = p.source === "cms";
-                return (
-                  '<tr data-id="' +
-                  p.id +
-                  '"><td>#' +
-                  p.id +
-                  '</td><td><span class="adm-cell-main">' +
-                  esc(ov.name || p.name) +
-                  "</span>" +
-                  (ov.note ? '<span class="adm-cell-sub">' + esc(ov.note) + "</span>" : "") +
-                  "</td><td>" +
-                  money(price) +
-                  "</td><td>" +
-                  esc(p.seller || "") +
-                  "</td><td>" +
-                  (isCms
-                    ? '<span class="adm-tag pink">cms</span>'
-                    : '<span class="adm-tag">catalog</span>') +
-                  "</td><td>" +
-                  (active
-                    ? '<span class="adm-tag ok">Hiện</span>'
-                    : '<span class="adm-tag bad">Ẩn</span>') +
-                  '</td><td><div class="adm-row-actions">' +
-                  '<button type="button" class="btn btn-ghost btn-sm js-toggle-prod">' +
-                  (active ? "Ẩn" : "Hiện") +
-                  "</button>" +
-                  '<a class="btn btn-outline btn-sm" href="' +
-                  siteUrl("/kho-hang") +
-                  '">Kho</a></div></td></tr>'
-                );
-              })
-              .join("")
-          : '<tr><td colspan="7" class="adm-empty">Không khớp bộ lọc</td></tr>');
-      tbody.querySelectorAll(".js-toggle-prod").forEach((btn) => {
+      tbody.innerHTML = filtered.length
+        ? filtered
+            .map((p) => {
+              const ov = map[String(p.id)] || {};
+              const active = ov.active !== false && p.active !== false;
+              const price = ov.price_cents != null ? Number(ov.price_cents) : p.price;
+              const name = ov.name || p.name;
+              const code =
+                p.countryCode ||
+                (Array.isArray(p.cats) ? p.cats.find((x) => /^[a-z]{2}$/.test(x)) : "") ||
+                "";
+              const cName =
+                p.countryName ||
+                (countries.find((x) => x.code === code) || {}).nameVi ||
+                code.toUpperCase();
+              const buyHref = p.href
+                ? siteUrl(p.href)
+                : siteUrl("/tat-ca-san-pham/" + (p.slug || "goi") + "-" + p.id);
+              const prodHref = siteUrl(
+                typeof productSeoPath === "function"
+                  ? productSeoPath(Object.assign({}, p, { name: name, slug: p.slug || ("goi-" + p.id) }))
+                  : "/tat-ca-san-pham/" + (p.slug || "goi") + "-" + p.id
+              );
+              const isCms = p.source === "cms";
+              return (
+                '<tr data-id="' +
+                esc(String(p.id)) +
+                '" data-cms="' +
+                (isCms ? "1" : "0") +
+                '"><td>#' +
+                esc(String(p.id)) +
+                '</td><td><span class="adm-cell-main">' +
+                esc(cName) +
+                '</span><span class="adm-cell-sub">' +
+                esc(String(code).toUpperCase()) +
+                '</span></td><td><span class="adm-cell-main">' +
+                esc(name) +
+                "</span>" +
+                (ov.note || p.note
+                  ? '<span class="adm-cell-sub">' + esc(ov.note || p.note) + "</span>"
+                  : "") +
+                "</td><td><b>" +
+                money(price) +
+                "</b></td><td>" +
+                (active
+                  ? '<span class="adm-tag ok">Hiện</span>'
+                  : '<span class="adm-tag bad">Ẩn</span>') +
+                '</td><td><div class="adm-row-actions">' +
+                '<a class="btn btn-primary btn-sm" href="' +
+                esc(prodHref) +
+                '" target="_blank" rel="noopener">Mua</a>' +
+                '<a class="btn btn-outline btn-sm" href="' +
+                esc(buyHref) +
+                '" target="_blank" rel="noopener">Trang QG</a>' +
+                '<button type="button" class="btn btn-ghost btn-sm js-edit">Sửa</button>' +
+                '<button type="button" class="btn btn-ghost btn-sm js-toggle">' +
+                (active ? "Ẩn" : "Hiện") +
+                "</button>" +
+                '<button type="button" class="btn btn-danger btn-sm js-del">Xóa</button>' +
+                "</div></td></tr>"
+              );
+            })
+            .join("")
+        : '<tr><td colspan="6" class="adm-empty">Không khớp bộ lọc</td></tr>';
+
+      tbody.querySelectorAll(".js-edit").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.closest("tr").getAttribute("data-id");
+          const row = products.find((x) => String(x.id) === id);
+          if (row) openCompose(Object.assign({}, row, map[id] || {}));
+        });
+      });
+      tbody.querySelectorAll(".js-toggle").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const id = btn.closest("tr").getAttribute("data-id");
           const ov = map[id] || {};
-          const next = !(ov.active !== false);
-          await api("/admin/products/" + id, {
-            method: "PUT",
-            body: JSON.stringify({ active: next })
-          });
-          map[id] = Object.assign({}, ov, { active: next, product_id: id });
-          paint();
+          const cur = products.find((x) => String(x.id) === id);
+          const currentlyOn = ov.active !== false && (!cur || cur.active !== false);
+          const next = !currentlyOn;
+          if (!next) {
+            const ok = await confirmAction({
+              title: "Ẩn gói proxy",
+              message: "Gói #" + id + " sẽ bị ẩn khỏi bán. Bạn có chắc?",
+              okText: "Ẩn gói"
+            });
+            if (!ok) return;
+          }
+          if (btn.closest("tr").getAttribute("data-cms") === "1") {
+            await api("/admin/cms-products/" + encodeURIComponent(id), {
+              method: "PUT",
+              body: JSON.stringify(Object.assign({}, cur, { active: next, id }))
+            });
+          } else {
+            await api("/admin/products/" + encodeURIComponent(id), {
+              method: "PUT",
+              body: JSON.stringify({ productId: id, active: next })
+            });
+          }
           toast(next ? "Đã hiện" : "Đã ẩn");
+          renderProducts(body);
+        });
+      });
+      tbody.querySelectorAll(".js-del").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const tr = btn.closest("tr");
+          const id = tr.getAttribute("data-id");
+          const isCms = tr.getAttribute("data-cms") === "1";
+          if (isCms) {
+            if (!(await confirmAction({ title: "Xóa gói proxy", message: "Xóa vĩnh viễn gói CMS #" + id + "?", okText: "Xóa gói" }))) return;
+            await api("/admin/cms-products/" + encodeURIComponent(id), { method: "DELETE" });
+            toast("Đã xóa");
+          } else {
+            if (!(await confirmAction({ title: "Ẩn gói proxy", message: "Gói mặc định không xóa cứng — sẽ ẩn khỏi bán. Tiếp tục?", okText: "Ẩn gói" }))) return;
+            await api("/admin/products/" + encodeURIComponent(id), {
+              method: "PUT",
+              body: JSON.stringify({ productId: id, active: false })
+            });
+            toast("Đã ẩn gói mặc định");
+          }
+          renderProducts(body);
         });
       });
     }
@@ -1186,6 +1864,9 @@
 
   async function renderStock(body) {
     const data = await api("/stock");
+    const countryOpts = [{ v: "", t: "Tất cả quốc gia" }].concat(
+      stockCountryOptions(data.products || [])
+    );
     body.innerHTML =
       '<div class="adm-card"><h2>Nhập tồn kho</h2>' +
       '<div class="adm-form-grid">' +
@@ -1195,6 +1876,7 @@
       "</div></div>" +
       '<div class="adm-card"><h2>Tồn hiện tại</h2>' +
       '<div class="adm-filters"><input class="adm-search" id="stkFilter" placeholder="Lọc mã hoặc tên sản phẩm…">' +
+      filterSelect("stkCountry", "Quốc gia", countryOpts, "") +
       filterSelect(
         "stkSort",
         "Sắp xếp",
@@ -1202,17 +1884,163 @@
           { v: "avail", t: "Còn nhiều → ít" },
           { v: "id", t: "Theo mã" },
           { v: "name", t: "Theo tên" },
+          { v: "country", t: "Theo quốc gia" },
           { v: "empty", t: "Hết hàng trước" }
         ],
         "avail"
       ) +
       '<button type="button" class="btn btn-outline" id="stkFilterBtn">Lọc</button></div>' +
       '<div class="adm-table-wrap" style="margin-top:10px"><table class="adm-table"><thead><tr>' +
-      "<th>Mã</th><th>Sản phẩm</th><th>Còn</th><th>Đã bán</th><th>Tổng</th><th></th></tr></thead><tbody id=\"stkRows\">" +
+      "<th>Mã</th><th>Quốc gia</th><th>Sản phẩm</th><th>Còn</th><th>Đã bán</th><th>Tổng</th><th></th></tr></thead><tbody id=\"stkRows\">" +
       "</tbody></table></div></div>";
+
+    async function openStockDetail(productId) {
+      const label = stockProductLabel(productId);
+      const countryText = label.countryCode
+        ? (label.countryName || label.countryCode.toUpperCase()) +
+          " (" +
+          String(label.countryCode).toUpperCase() +
+          ")"
+        : "—";
+      const prev = document.getElementById("stkDetailModal");
+      if (prev) prev.remove();
+      const wrap = document.createElement("div");
+      wrap.id = "stkDetailModal";
+      wrap.className = "adm-modal-bg";
+      wrap.innerHTML =
+        '<div class="adm-modal adm-modal--wide" role="dialog" aria-modal="true">' +
+        "<h3>Tồn kho · #" +
+        esc(productId) +
+        "</h3>" +
+        '<p><b>' +
+        esc(label.title) +
+        "</b>" +
+        (label.subtitle ? " · " + esc(label.subtitle) : "") +
+        " · Quốc gia: " +
+        esc(countryText) +
+        "</p>" +
+        '<div class="adm-filters" style="margin:0 0 10px">' +
+        '<button type="button" class="btn btn-outline btn-sm" id="stkDetRefresh">Làm mới</button>' +
+        '<button type="button" class="btn btn-danger btn-sm" id="stkDetVoidMany">Xóa nhiều dòng còn</button>' +
+        "</div>" +
+        '<div class="adm-table-wrap" style="max-height:340px;overflow:auto"><table class="adm-table"><thead><tr>' +
+        "<th style=\"width:70px\">ID</th><th>Dòng hàng</th><th style=\"width:160px\"></th></tr></thead>" +
+        '<tbody id="stkDetRows"><tr><td colspan="3" class="adm-empty">Đang tải…</td></tr></tbody></table></div>' +
+        '<div class="adm-form-grid" style="margin-top:14px">' +
+        '<div class="adm-field span3"><label>Thêm dòng mới (1 dòng = 1 đơn vị)</label>' +
+        '<textarea id="stkDetAdd" rows="4" placeholder="ip:port:user:pass"></textarea></div>' +
+        '<div class="adm-field span3 adm-compose-actions" style="justify-content:flex-end">' +
+        '<button type="button" class="btn btn-outline" data-close="1">Đóng</button>' +
+        '<button type="button" class="btn btn-primary" id="stkDetAddBtn">Thêm vào kho</button>' +
+        "</div></div></div>";
+      document.body.appendChild(wrap);
+
+      const close = () => wrap.remove();
+      wrap.addEventListener("click", (e) => {
+        if (e.target === wrap || e.target.getAttribute("data-close") === "1") close();
+      });
+
+      async function loadRows() {
+        const box = document.getElementById("stkDetRows");
+        if (!box) return;
+        box.innerHTML = '<tr><td colspan="3" class="adm-empty">Đang tải…</td></tr>';
+        try {
+          const data = await api(
+            "/stock/" + encodeURIComponent(productId) + "/items?status=available&limit=1000"
+          );
+          const items = data.items || [];
+          box.innerHTML = items.length
+            ? items
+                .map(
+                  (it) =>
+                    '<tr data-item-id="' +
+                    esc(it.id) +
+                    '"><td>#' +
+                    esc(it.id) +
+                    '</td><td><input class="adm-stk-line" value="' +
+                    esc(it.payload || "") +
+                    '"></td><td style="white-space:nowrap">' +
+                    '<button type="button" class="btn btn-outline btn-sm js-stk-save">Lưu</button> ' +
+                    '<button type="button" class="btn btn-danger btn-sm js-stk-del">Xóa</button>' +
+                    "</td></tr>"
+                )
+                .join("")
+            : '<tr><td colspan="3" class="adm-empty">Chưa có dòng tồn còn lại</td></tr>';
+          box.querySelectorAll(".js-stk-save").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const tr = btn.closest("tr");
+              const id = tr.getAttribute("data-item-id");
+              const payload = tr.querySelector(".adm-stk-line")?.value || "";
+              await api("/stock/item/" + encodeURIComponent(id), {
+                method: "PATCH",
+                body: JSON.stringify({ payload })
+              });
+              toast("Đã lưu dòng #" + id);
+            });
+          });
+          box.querySelectorAll(".js-stk-del").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const tr = btn.closest("tr");
+              const id = tr.getAttribute("data-item-id");
+              const ok = await confirmAction({
+                title: "Xóa dòng tồn",
+                message: "Xóa dòng #" + id + " khỏi kho còn lại?",
+                okText: "Xóa dòng"
+              });
+              if (!ok) return;
+              await api("/stock/item/" + encodeURIComponent(id), { method: "DELETE" });
+              toast("Đã xóa dòng #" + id);
+              await loadRows();
+              renderStock(body);
+            });
+          });
+        } catch (err) {
+          box.innerHTML =
+            '<tr><td colspan="3" class="adm-empty">' +
+            esc(err.message || "Không tải được") +
+            "</td></tr>";
+        }
+      }
+
+      document.getElementById("stkDetRefresh")?.addEventListener("click", () => loadRows());
+      document.getElementById("stkDetVoidMany")?.addEventListener("click", async () => {
+        const count = Number(prompt("Xóa bao nhiêu dòng còn lại (theo thứ tự cũ → mới)?", "10") || 0);
+        if (!count) return;
+        const ok = await confirmAction({
+          title: "Xóa nhiều dòng tồn",
+          message: "Xóa " + count + " dòng tồn còn lại của sản phẩm #" + productId + "?",
+          okText: "Xóa tồn"
+        });
+        if (!ok) return;
+        await api("/admin/stock/void", {
+          method: "POST",
+          body: JSON.stringify({ productId, count })
+        });
+        toast("Đã xóa " + count + " dòng");
+        await loadRows();
+        renderStock(body);
+      });
+      document.getElementById("stkDetAddBtn")?.addEventListener("click", async () => {
+        const text = document.getElementById("stkDetAdd")?.value || "";
+        if (!String(text).trim()) {
+          toast("Chưa nhập dòng hàng");
+          return;
+        }
+        await api("/stock/import", {
+          method: "POST",
+          body: JSON.stringify({ productId, text })
+        });
+        document.getElementById("stkDetAdd").value = "";
+        toast("Đã thêm vào kho");
+        await loadRows();
+        renderStock(body);
+      });
+      await loadRows();
+    }
 
     function paintStock() {
       const needle = String(document.getElementById("stkFilter")?.value || "").toLowerCase();
+      const country = String(document.getElementById("stkCountry")?.value || "").toLowerCase();
       const sort = document.getElementById("stkSort")?.value || "avail";
       let list = (data.products || []).slice();
       if (needle) {
@@ -1223,8 +2051,18 @@
             " " +
             String(label.title || "").toLowerCase() +
             " " +
-            String(label.subtitle || "").toLowerCase();
+            String(label.subtitle || "").toLowerCase() +
+            " " +
+            String(label.countryName || "").toLowerCase() +
+            " " +
+            String(label.countryCode || "").toLowerCase();
           return hay.includes(needle);
+        });
+      }
+      if (country) {
+        list = list.filter((p) => {
+          const label = stockProductLabel(p.product_id);
+          return String(label.countryCode || "").toLowerCase() === country;
         });
       }
       if (sort === "empty") list.sort((a, b) => a.available - b.available);
@@ -1237,17 +2075,37 @@
             "vi"
           )
         );
+      else if (sort === "country")
+        list.sort((a, b) => {
+          const ca = stockProductLabel(a.product_id);
+          const cb = stockProductLabel(b.product_id);
+          const byName = String(ca.countryName || ca.countryCode || "").localeCompare(
+            String(cb.countryName || cb.countryCode || ""),
+            "vi"
+          );
+          if (byName) return byName;
+          return String(a.product_id).localeCompare(String(b.product_id));
+        });
       else list.sort((a, b) => b.available - a.available);
       const box = document.getElementById("stkRows");
       box.innerHTML = list.length
         ? list
             .map((p) => {
               const label = stockProductLabel(p.product_id);
+              const countryCell = label.countryCode
+                ? '<span class="adm-cell-main">' +
+                  esc(label.countryName || label.countryCode.toUpperCase()) +
+                  '</span><span class="adm-cell-sub">' +
+                  esc(String(label.countryCode).toUpperCase()) +
+                  "</span>"
+                : '<span class="adm-cell-sub">—</span>';
               return (
                 '<tr data-id="' +
                 esc(p.product_id) +
                 '"><td>#' +
                 esc(p.product_id) +
+                "</td><td>" +
+                countryCell +
                 '</td><td><span class="adm-cell-main">' +
                 esc(label.title) +
                 "</span>" +
@@ -1260,22 +2118,15 @@
                 p.sold +
                 "</td><td>" +
                 p.total +
-                '</td><td><button type="button" class="btn btn-danger btn-sm js-void">Xóa tồn còn</button></td></tr>'
+                '</td><td><button type="button" class="btn btn-outline btn-sm js-view">Xem tồn kho</button></td></tr>'
               );
             })
             .join("")
-        : '<tr><td colspan="6" class="adm-empty">Chưa có tồn kho / không khớp lọc</td></tr>';
-      box.querySelectorAll(".js-void").forEach((btn) => {
-        btn.addEventListener("click", async () => {
+        : '<tr><td colspan="7" class="adm-empty">Chưa có tồn kho / không khớp lọc</td></tr>';
+      box.querySelectorAll(".js-view").forEach((btn) => {
+        btn.addEventListener("click", () => {
           const productId = btn.closest("tr").getAttribute("data-id");
-          const count = Number(prompt("Xóa bao nhiêu dòng còn lại?", "10") || 0);
-          if (!count) return;
-          await api("/admin/stock/void", {
-            method: "POST",
-            body: JSON.stringify({ productId, count })
-          });
-          toast("Đã xóa tồn");
-          renderStock(body);
+          openStockDetail(productId);
         });
       });
     }
@@ -1288,6 +2139,8 @@
     });
     paintStock();
     document.getElementById("stkFilterBtn")?.addEventListener("click", paintStock);
+    document.getElementById("stkCountry")?.addEventListener("change", paintStock);
+    document.getElementById("stkSort")?.addEventListener("change", paintStock);
     document.getElementById("stkFilter")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") paintStock();
     });
@@ -1529,6 +2382,14 @@
         renderShops(body);
       });
       document.getElementById("shopToggle")?.addEventListener("click", async () => {
+        if (active) {
+          const ok = await confirmAction({
+            title: "Ẩn / tắt shop",
+            message: "Shop sẽ bị tắt và ẩn khỏi bán. Tiếp tục?",
+            okText: "Tắt shop"
+          });
+          if (!ok) return;
+        }
         await api("/admin/shops/" + encodeURIComponent(token), {
           method: "PUT",
           body: JSON.stringify({ token, active: !active })
@@ -1716,6 +2577,42 @@
     document.getElementById("goWallet")?.addEventListener("click", () => setView("wallet"));
   }
 
+
+  function chatUnreadBadgeHtml(n) {
+    const pending = Math.max(0, Number(n) || 0);
+    if (!pending) return "";
+    return (
+      ' <span class="badge" style="position:static;margin-left:6px">' +
+      (pending > 99 ? "99+" : pending) +
+      "</span>"
+    );
+  }
+
+  function resortAdminChatList(listEl) {
+    if (!listEl) return;
+    const header = listEl.querySelector(":scope > .adm-muted, :scope > div.adm-muted");
+    const items = Array.from(listEl.querySelectorAll(":scope > .adm-list-item"));
+    items.sort((a, b) => {
+      const ua = Math.max(0, Number(a.getAttribute("data-unread") || 0));
+      const ub = Math.max(0, Number(b.getAttribute("data-unread") || 0));
+      if (ub !== ua) return ub - ua;
+      const ta = Number(a.getAttribute("data-last") || 0);
+      const tb = Number(b.getAttribute("data-last") || 0);
+      return tb - ta;
+    });
+    items.forEach((el) => listEl.appendChild(el));
+    if (header && header.parentNode === listEl) listEl.insertBefore(header, listEl.firstChild);
+  }
+
+  function clearThreadUnreadBadge(btn, listEl) {
+    if (!btn) return 0;
+    const prev = Math.max(0, Number(btn.getAttribute("data-unread") || 0));
+    btn.setAttribute("data-unread", "0");
+    btn.querySelectorAll(".adm-tag.warn, .badge").forEach((el) => el.remove());
+    if (listEl) resortAdminChatList(listEl);
+    return prev;
+  }
+
   async function renderChatSupport(body) {
     setAdminChatLayout(true);
     if (!document.getElementById("adm-chat-guest-css")) {
@@ -1728,7 +2625,7 @@
       document.head.appendChild(st);
     }
     body.innerHTML =
-      '<div class="adm-hint">Kênh <b>Vua MMO ↔ Khách</b> (room <code>vuammo_support</code>). Danh sách hội thoại luôn hiện — trống cũng check được.</div>' +
+      '<div class="adm-hint">Kênh <b>Chat hỗ trợ Vua Proxy ↔ Khách</b>. Danh sách hội thoại luôn hiện — trống cũng check được.</div>' +
       '<div class="adm-split"><div class="adm-list" id="supList"></div>' +
       '<div class="adm-chat-pane"><div class="adm-chat-head" id="supHead">Chọn khách bên trái</div>' +
       '<div class="adm-chat-msgs" id="supMsgs"><div class="adm-empty">Chưa chọn hội thoại</div></div>' +
@@ -1736,14 +2633,45 @@
       '<button class="btn btn-primary" type="submit">Gửi</button></form></div></div>';
     const threads = await api("/admin/chat/threads?channel=support");
     const list = document.getElementById("supList");
+    const pending = state.pendingSupportChat;
+    state.pendingSupportChat = null;
     const rows = (threads.threads || []).slice().sort((a, b) => {
-      const ua = Number(a.unread || (a.last_role === "user" ? 1 : 0));
-      const ub = Number(b.unread || (b.last_role === "user" ? 1 : 0));
+      const ua = Math.max(0, Number(a.unread) || (a.last_role === "user" ? 1 : 0));
+      const ub = Math.max(0, Number(b.unread) || (b.last_role === "user" ? 1 : 0));
       if (ub !== ua) return ub - ua;
       const ta = a.last_at ? new Date(a.last_at).getTime() : 0;
       const tb = b.last_at ? new Date(b.last_at).getTime() : 0;
       return tb - ta;
     });
+
+    let openKey = "";
+    let openMeta = null;
+    if (pending) {
+      const emailLc = String(pending.email || "").toLowerCase();
+      const match = rows.find((t) => {
+        if (pending.visitorKey && t.visitor_key === pending.visitorKey) return true;
+        if (pending.buyerId && String(t.user_id || "") === String(pending.buyerId)) return true;
+        const te = String(t.user_email || "").toLowerCase();
+        return emailLc && te && te === emailLc;
+      });
+      openKey = (match && match.visitor_key) || pending.visitorKey || "";
+      openMeta = {
+        user_name: pending.name || (match && match.user_name) || "Khách",
+        user_email: pending.email || (match && match.user_email) || ""
+      };
+      if (openKey && !rows.some((t) => t.visitor_key === openKey)) {
+        rows.unshift({
+          visitor_key: openKey,
+          user_name: openMeta.user_name,
+          user_email: openMeta.user_email,
+          last_body: "",
+          last_at: null,
+          last_role: "support",
+          unread: 0
+        });
+      }
+    }
+
     list.innerHTML =
       '<div style="padding:10px;border-bottom:1px solid #f1f5f9" class="adm-muted">Hội thoại: <b>' +
       rows.length +
@@ -1751,11 +2679,23 @@
       (rows.length
         ? rows
             .map((t) => {
-              const pending =
-                t.unread != null ? Number(t.unread) === 1 : t.last_role === "user";
+              const pending = Math.max(
+                0,
+                Number(t.unread) || (t.last_role === "user" ? 1 : 0)
+              );
               return (
                 (() => {
                   const g = guestChatLabel(t);
+                  const preview = String(t.last_body || "")
+                    .replace(/^Đơn\s+#?[A-Z0-9_-]+\s*[·•\-]?\s*/i, "")
+                    .replace(/^Về\s+Đơn\s+#?[A-Z0-9_-]+[^\n]*/i, "")
+                    .trim();
+                  const sub = g.email
+                    ? esc(g.email) + (preview ? " · " + esc(preview) : "")
+                    : preview
+                      ? esc(preview)
+                      : "";
+                  const lastTs = t.last_at ? new Date(t.last_at).getTime() : 0;
                   return (
                 '<button type="button" class="adm-list-item" data-v="' +
                 esc(t.visitor_key) +
@@ -1763,15 +2703,16 @@
                 esc(g.name) +
                 '" data-email="' +
                 esc(g.email) +
+                '" data-unread="' +
+                pending +
+                '" data-last="' +
+                lastTs +
                 '"><strong>' +
                 esc(g.name) +
-                (pending ? ' <span class="adm-tag warn">Mới</span>' : "") +
-                "</strong><small>" +
-                (g.email ? esc(g.email) + " · " : "") +
-                esc(t.last_body || "(trống)") +
-                " · " +
-                esc(fmt(t.last_at)) +
-                "</small></button>"
+                chatUnreadBadgeHtml(pending) +
+                "</strong>" +
+                (sub ? "<small>" + sub + "</small>" : "") +
+                "</button>"
                   );
                 })()
               );
@@ -1794,7 +2735,7 @@
         });
       } catch (_) {}
       const activeBtn = document.querySelector("#supList .adm-list-item.active");
-      if (activeBtn) activeBtn.querySelectorAll(".adm-tag.warn").forEach((el) => el.remove());
+      clearThreadUnreadBadge(activeBtn, document.getElementById("supList"));
       const data = await api(
         "/chat/messages?roomId=" +
           encodeURIComponent("vuammo_support") +
@@ -1805,7 +2746,7 @@
       const msgs = data.messages || [];
       box.innerHTML = msgs.length
         ? msgs.map((m) => renderAdminBubble(m)).join("")
-        : '<div class="adm-empty">Hội thoại trống</div>';
+        : '<div class="adm-empty">Hội thoại trống — gửi tin để bắt đầu chat với khách.</div>';
       box.scrollTop = box.scrollHeight;
       refreshBadges();
     }
@@ -1823,6 +2764,10 @@
 
     const supForm = document.getElementById("supForm");
     const supInput = document.getElementById("supInput");
+    if (pending && pending.orderHint && supInput && !supInput.value) {
+      supInput.value = "Về " + pending.orderHint + ": ";
+      supInput.focus();
+    }
     async function sendSupport({ text, attachment }) {
       if (!state.supportVisitor) return;
       const hasAttach = !!(attachment && attachment.url);
@@ -1852,6 +2797,17 @@
         if (supInput) supInput.value = "";
         await sendSupport({ text });
       });
+    }
+
+    if (openKey) {
+      const btn = Array.from(list.querySelectorAll(".adm-list-item")).find(
+        (el) => el.getAttribute("data-v") === openKey
+      );
+      if (btn) {
+        list.querySelectorAll(".adm-list-item").forEach((x) => x.classList.remove("active"));
+        btn.classList.add("active");
+      }
+      openThread(openKey, openMeta);
     }
   }
 
@@ -1893,10 +2849,16 @@
         esc(s.token) +
         '" data-name="' +
         esc(s.name) +
+        '" data-unread="' +
+        pending +
+        '" data-last="' +
+        (a && a.last_at ? new Date(a.last_at).getTime() : 0) +
         '"><strong>' +
         esc(s.name) +
         (pending
-          ? ' <span class="badge" style="position:static;margin-left:6px">' + pending + "</span>"
+          ? ' <span class="badge" style="position:static;margin-left:6px">' +
+            (pending > 99 ? "99+" : pending) +
+            "</span>"
           : "") +
         "</strong><small>" +
         esc(s.city || "") +
@@ -1959,8 +2921,8 @@
       );
       const box = document.getElementById("shopThreads");
       const rows = (data.threads || []).slice().sort((a, b) => {
-        const ua = Number(a.unread || (a.last_role === "user" ? 1 : 0));
-        const ub = Number(b.unread || (b.last_role === "user" ? 1 : 0));
+        const ua = Math.max(0, Number(a.unread) || (a.last_role === "user" ? 1 : 0));
+        const ub = Math.max(0, Number(b.unread) || (b.last_role === "user" ? 1 : 0));
         if (ub !== ua) return ub - ua;
         const ta = a.last_at ? new Date(a.last_at).getTime() : 0;
         const tb = b.last_at ? new Date(b.last_at).getTime() : 0;
@@ -1973,8 +2935,11 @@
         (rows.length
           ? rows
               .map((t) => {
-                const pending =
-                  t.unread != null ? Number(t.unread) === 1 : t.last_role === "user";
+                const pending = Math.max(
+                  0,
+                  Number(t.unread) || (t.last_role === "user" ? 1 : 0)
+                );
+                const lastTs = t.last_at ? new Date(t.last_at).getTime() : 0;
                 return (
                   (() => {
                     const g = guestChatLabel(t);
@@ -1985,9 +2950,13 @@
                   esc(g.name) +
                   '" data-email="' +
                   esc(g.email) +
+                  '" data-unread="' +
+                  pending +
+                  '" data-last="' +
+                  lastTs +
                   '"><strong>' +
                   esc(g.name) +
-                  (pending ? ' <span class="adm-tag warn">Chờ</span>' : "") +
+                  chatUnreadBadgeHtml(pending) +
                   "</strong><small>" +
                   (g.email ? esc(g.email) + " · " : "") +
                   esc(t.last_body || "(trống)") +
@@ -2034,19 +3003,38 @@
         });
       } catch (_) {}
       const activeBtn = document.querySelector("#shopThreads .adm-list-item.active");
-      const wasPending = !!(activeBtn && activeBtn.querySelector(".adm-tag.warn"));
-      if (activeBtn) activeBtn.querySelectorAll(".adm-tag.warn").forEach((el) => el.remove());
-      if (wasPending && pendingMap[state.shopToken]) {
-        pendingMap[state.shopToken] = Math.max(0, Number(pendingMap[state.shopToken] || 0) - 1);
+      const cleared = clearThreadUnreadBadge(
+        activeBtn,
+        document.getElementById("shopThreads")
+      );
+      if (cleared > 0 && pendingMap[state.shopToken] != null) {
+        pendingMap[state.shopToken] = Math.max(
+          0,
+          Number(pendingMap[state.shopToken] || 0) - cleared
+        );
       }
       const shopBtn = document.querySelector(
         '#shopRooms .adm-list-item[data-token="' + state.shopToken + '"]'
       );
       if (shopBtn) {
         const left = Number(pendingMap[state.shopToken] || 0);
-        const badge = shopBtn.querySelector(".badge");
-        if (left <= 0 && badge) badge.remove();
-        else if (badge) badge.textContent = String(left);
+        let badge = shopBtn.querySelector(".badge");
+        if (left <= 0) {
+          if (badge) badge.remove();
+        } else if (badge) {
+          badge.textContent = left > 99 ? "99+" : String(left);
+        } else {
+          const strong = shopBtn.querySelector("strong");
+          if (strong) {
+            badge = document.createElement("span");
+            badge.className = "badge";
+            badge.style.cssText = "position:static;margin-left:6px";
+            badge.textContent = left > 99 ? "99+" : String(left);
+            strong.appendChild(badge);
+          }
+        }
+        shopBtn.setAttribute("data-unread", String(left));
+        resortAdminChatList(document.getElementById("roomItems") || document.getElementById("shopRooms"));
       }
       const data = await api(
         "/chat/messages?roomId=" +
@@ -2209,6 +3197,14 @@
         btn.addEventListener("click", async () => {
           const id = btn.closest("tr").getAttribute("data-id");
           const s = data.items.find((x) => String(x.id) === id);
+          if (s && s.visible) {
+            const ok = await confirmAction({
+              title: "Ẩn shop ảo",
+              message: "Ẩn shop \"" + (s.name || id) + "\" khỏi danh sách hiển thị?",
+              okText: "Ẩn"
+            });
+            if (!ok) return;
+          }
           await api("/admin/virtual-shops/" + id, {
             method: "PUT",
             body: JSON.stringify({
@@ -2227,7 +3223,7 @@
       });
       rows.querySelectorAll(".js-del").forEach((btn) => {
         btn.addEventListener("click", async () => {
-          if (!confirm("Xóa shop ảo này?")) return;
+          if (!(await confirmAction({ title: "Xóa shop ảo", message: "Shop ảo sẽ bị xóa khỏi danh sách. Không hoàn tác được.", okText: "Xóa" }))) return;
           await api("/admin/virtual-shops/" + btn.closest("tr").getAttribute("data-id"), {
             method: "DELETE"
           });
@@ -2377,6 +3373,14 @@
         btn.addEventListener("click", async () => {
           const id = btn.closest("tr").getAttribute("data-id");
           const p = data.items.find((x) => String(x.id) === id);
+          if (p && p.active) {
+            const ok = await confirmAction({
+              title: "Tắt mã khuyến mãi",
+              message: "Ẩn / tắt mã \"" + (p.code || id) + "\". Tiếp tục?",
+              okText: "Tắt mã"
+            });
+            if (!ok) return;
+          }
           await api("/admin/promos/" + id, {
             method: "PATCH",
             body: JSON.stringify({ active: !p.active })
@@ -2386,7 +3390,7 @@
       });
       document.querySelectorAll("#prRows .js-del").forEach((btn) => {
         btn.addEventListener("click", async () => {
-          if (!confirm("Xóa mã này?")) return;
+          if (!(await confirmAction({ title: "Xóa mã khuyến mãi", message: "Mã khuyến mãi sẽ bị xóa vĩnh viễn.", okText: "Xóa" }))) return;
           await api("/admin/promos/" + btn.closest("tr").getAttribute("data-id"), {
             method: "DELETE"
           });
@@ -2486,6 +3490,12 @@
     });
     body.querySelectorAll(".js-del").forEach((btn) => {
       btn.addEventListener("click", async () => {
+        const ok = await confirmAction({
+          title: "Xóa thông báo",
+          message: "Thông báo này sẽ bị xóa. Tiếp tục?",
+          okText: "Xóa"
+        });
+        if (!ok) return;
         await api("/admin/notifications/" + btn.closest("tr").getAttribute("data-id"), {
           method: "DELETE"
         });
@@ -2494,7 +3504,109 @@
     });
   }
 
-  async function renderBlog(body) {
+  
+  let blogQuill = null;
+
+  function destroyBlogEditor() {
+    blogQuill = null;
+  }
+
+  function getBlogHtml() {
+    if (blogQuill) {
+      const html = String(blogQuill.root.innerHTML || "").trim();
+      return html === "<p><br></p>" ? "" : html;
+    }
+    return document.getElementById("bContent")?.value || "";
+  }
+
+  function setBlogHtml(html) {
+    const safe = html && String(html).trim() ? String(html) : "<p><br></p>";
+    const ta = document.getElementById("bContent");
+    if (ta) ta.value = html || "";
+    if (!blogQuill) return;
+    blogQuill.setContents([]);
+    blogQuill.clipboard.dangerouslyPasteHTML(0, safe);
+  }
+
+  function mountBlogEditor(initialHtml) {
+    destroyBlogEditor();
+    const host = document.getElementById("bEditor");
+    if (!host) return null;
+    // Reset host so remount không bị toolbar trùng
+    const wrap = host.closest(".adm-rte");
+    if (wrap) {
+      wrap.innerHTML = '<div id="bEditor"></div>';
+    } else {
+      host.innerHTML = "";
+    }
+    const fresh = document.getElementById("bEditor");
+    if (!fresh) return null;
+    if (!window.Quill) {
+      console.warn("Quill chưa tải");
+      const ta = document.getElementById("bContent");
+      if (ta) {
+        ta.classList.remove("hidden");
+        ta.rows = 14;
+        ta.value = initialHtml || "";
+      }
+      return null;
+    }
+    blogQuill = new Quill(fresh, {
+      theme: "snow",
+      placeholder: "Nhập nội dung bài viết…",
+      modules: {
+        toolbar: {
+          container: [
+            [{ font: [] }, { size: ["small", false, "large", "huge"] }],
+            [{ header: [1, 2, 3, 4, false] }],
+            ["bold", "italic", "underline", "strike"],
+            [{ color: [] }, { background: [] }],
+            [{ script: "sub" }, { script: "super" }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            [{ indent: "-1" }, { indent: "+1" }],
+            [{ align: [] }],
+            ["blockquote", "code-block"],
+            ["link", "image"],
+            ["clean"]
+          ],
+          handlers: {
+            image: function () {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = async () => {
+                const file = input.files && input.files[0];
+                if (!file) return;
+                try {
+                  const url = await uploadAdminFile(file);
+                  const range = blogQuill.getSelection(true) || { index: blogQuill.getLength() };
+                  blogQuill.insertEmbed(range.index, "image", url, "user");
+                  blogQuill.setSelection(range.index + 1, 0);
+                  const imgField = document.getElementById("bImage");
+                  if (imgField && !imgField.value.trim()) {
+                    imgField.value = url;
+                    imgField.dispatchEvent(new Event("input"));
+                  }
+                  toast("Đã chèn ảnh");
+                } catch (e) {
+                  toast(e.message || "Upload ảnh lỗi");
+                }
+              };
+              input.click();
+            }
+          }
+        }
+      }
+    });
+    setBlogHtml(initialHtml || "");
+    blogQuill.on("text-change", () => {
+      const ta = document.getElementById("bContent");
+      if (ta) ta.value = getBlogHtml();
+    });
+    return blogQuill;
+  }
+
+async function renderBlog(body) {
     const sitePosts = getSharePosts();
     const f = state.blog || { q: "", status: "all", locale: "all", category: "all" };
     state.blog = f;
@@ -2561,15 +3673,10 @@
       '<div class="adm-field"><label>Tiêu đề</label><input id="bTitle" placeholder="Tiêu đề bài viết"></div>' +
       '<div class="adm-field"><label>Slug</label><input id="bSlug" placeholder="tu-dong-tu-tieu-de"></div>' +
       '<div class="adm-field"><label>Excerpt</label><input id="bExcerpt" placeholder="Tóm tắt ngắn"></div>' +
-      '<div class="adm-field"><label>Nội dung</label>' +
-      '<div class="adm-toolbar" id="bToolbar">' +
-      '<button type="button" data-wrap="h2">H2</button>' +
-      '<button type="button" data-wrap="h3">H3</button>' +
-      '<button type="button" data-wrap="p">P</button>' +
-      '<button type="button" data-wrap="ul">List</button>' +
-      '<button type="button" data-wrap="ol">1.</button>' +
-      '<button type="button" data-wrap="a">Link</button></div>' +
-      '<textarea id="bContent" rows="12" placeholder="<p>…</p>"></textarea></div>' +
+      '<div class="adm-field span3"><label>Nội dung</label>' +
+      '<div class="adm-rte"><div id="bEditor"></div></div>' +
+      '<textarea id="bContent" class="hidden" aria-hidden="true"></textarea>' +
+      '<p class="adm-rte-hint">Soạn thảo như Word — in đậm, tiêu đề, danh sách, màu chữ, căn lề, chèn ảnh/link. HTML được lưu tự động phía sau.</p></div>' +
       '<div class="adm-field"><label>Chèn ảnh + alt</label>' +
       '<div class="adm-file-row">' +
       '<input type="file" id="bImgFile" accept="image/*">' +
@@ -2658,7 +3765,7 @@
       document.getElementById("bImage").value = post ? post.image || "" : "";
       document.getElementById("bOg").value = post ? post.ogImage || "" : "";
       document.getElementById("bCanon").value = post ? post.canonicalPath || "" : "";
-      document.getElementById("bContent").value = post ? post.content || "" : "";
+      mountBlogEditor(post ? post.content || "" : "");
       editExtras = {
         readTime: post ? post.readTime || "" : "",
         publishedDate: post && post.publishedDate ? post.publishedDate : null
@@ -2697,7 +3804,7 @@
           status === "published"
             ? editExtras.publishedDate || new Date().toISOString().slice(0, 10)
             : editExtras.publishedDate,
-        content: document.getElementById("bContent").value
+        content: getBlogHtml()
       };
       if (id) {
         await api("/admin/blog/" + id, { method: "PUT", body: JSON.stringify(payload) });
@@ -2750,7 +3857,7 @@
       renderBlog(body);
     });
     document.getElementById("blogSync")?.addEventListener("click", async () => {
-      if (!confirm("Đồng bộ " + sitePosts.length + " bài từ Chia sẻ vào admin/DB?")) return;
+      if (!(await confirmAction({ title: "Đồng bộ blog", message: "Đồng bộ " + sitePosts.length + " bài từ Chia sẻ vào admin/DB?", okText: "Đồng bộ", danger: false }))) return;
       await doSync();
     });
     document.getElementById("blogNew")?.addEventListener("click", () => showForm(null));
@@ -2769,26 +3876,9 @@
     });
     document.getElementById("bImage")?.addEventListener("input", syncImgPreview);
 
-    document.getElementById("bToolbar")?.querySelectorAll("button").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const ta = document.getElementById("bContent");
-        const kind = btn.getAttribute("data-wrap");
-        if (kind === "h2") wrapTextarea(ta, "<h2>", "</h2>");
-        else if (kind === "h3") wrapTextarea(ta, "<h3>", "</h3>");
-        else if (kind === "p") wrapTextarea(ta, "<p>", "</p>");
-        else if (kind === "ul") wrapTextarea(ta, "<ul>\n<li>", "</li>\n</ul>");
-        else if (kind === "ol") wrapTextarea(ta, "<ol>\n<li>", "</li>\n</ol>");
-        else if (kind === "a") {
-          const href = prompt("URL liên kết", "https://");
-          if (!href) return;
-          wrapTextarea(ta, '<a href="' + href.replace(/"/g, "") + '">', "</a>");
-        }
-      });
-    });
 
     document.getElementById("bImgInsert")?.addEventListener("click", async () => {
-      const ta = document.getElementById("bContent");
-      const alt = document.getElementById("bImgAlt").value.trim() || "";
+      const alt = document.getElementById("bImgAlt")?.value.trim() || "";
       let url = document.getElementById("bImage").value.trim();
       const file = document.getElementById("bImgFile")?.files?.[0];
       try {
@@ -2798,8 +3888,27 @@
           syncImgPreview();
         }
         if (!url) return toast("Chọn file hoặc nhập URL ảnh");
-        wrapTextarea(ta, '<p><img src="' + url.replace(/"/g, "") + '" alt="' + alt.replace(/"/g, "") + '"></p>\n', "");
-        toast("Đã chèn ảnh");
+        if (blogQuill) {
+          const range = blogQuill.getSelection(true) || { index: blogQuill.getLength() };
+          blogQuill.insertEmbed(range.index, "image", url, "user");
+          if (alt) {
+            const imgs = blogQuill.root.querySelectorAll('img[src="' + url.replace(/"/g, '\\"') + '"]');
+            const last = imgs[imgs.length - 1];
+            if (last) last.setAttribute("alt", alt);
+          }
+          blogQuill.setSelection(range.index + 1, 0);
+        } else {
+          const ta = document.getElementById("bContent");
+          if (ta) {
+            ta.value +=
+              '<p><img src="' +
+              url.replace(/"/g, "") +
+              '" alt="' +
+              alt.replace(/"/g, "") +
+              '"></p>\n';
+          }
+        }
+        toast("Đã chèn ảnh vào nội dung");
       } catch (e) {
         toast(e.message || "Upload lỗi");
       }
@@ -2826,7 +3935,7 @@
     });
     body.querySelectorAll(".js-del").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        if (!confirm("Xóa bài này?")) return;
+        if (!(await confirmAction({ title: "Xóa bài viết", message: "Bài blog sẽ bị xóa khỏi admin/DB.", okText: "Xóa" }))) return;
         await api("/admin/blog/" + btn.closest("tr").getAttribute("data-id"), {
           method: "DELETE"
         });
@@ -2960,6 +4069,13 @@
         '<tr><td colspan="6" class="adm-empty">Chưa có ai trong blacklist</td></tr>';
       document.querySelectorAll("#blRows .js-rm").forEach((btn) => {
         btn.addEventListener("click", async () => {
+          const ok = await confirmAction({
+            title: "Gỡ blacklist",
+            message: "User sẽ được mua hàng lại. Xác nhận gỡ?",
+            okText: "Gỡ blacklist",
+            danger: false
+          });
+          if (!ok) return;
           await api("/admin/blacklist/" + btn.closest("tr").getAttribute("data-id"), {
             method: "DELETE"
           });

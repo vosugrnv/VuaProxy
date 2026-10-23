@@ -4,14 +4,14 @@
 const SHARED_INTRO_HTML = `
   <h2>Tài khoản AI là gì?</h2>
   <p>Tài khoản AI là các gói truy cập phần mềm hoặc dịch vụ trí tuệ nhân tạo (ChatGPT, Claude, Gemini, Midjourney, CapCut…), thường được giao dưới dạng đăng nhập, nâng cấp chính chủ hoặc chia sẻ theo cam kết của từng gian hàng. Bạn dùng để viết content, thiết kế, chỉnh video, nghiên cứu hoặc hỗ trợ công việc mà không cần đăng ký gói gốc với giá cao.</p>
-  <h2>Tại sao nên mua hàng trên Vua MMO</h2>
-  <p>Vua MMO là sàn kết nối nhiều người bán sản phẩm số: so sánh giá nhanh, thanh toán trên hệ thống, giao nhận qua đơn hàng và theo dõi trạng thái rõ ràng. Mọi trao đổi bảo hành nên thực hiện trên đơn để được hỗ trợ đúng quy trình.</p>
+  <h2>Tại sao nên mua hàng trên Vua Proxy</h2>
+  <p>Vua Proxy là sàn kết nối nhiều người bán sản phẩm số: so sánh giá nhanh, thanh toán trên hệ thống, giao nhận qua đơn hàng và theo dõi trạng thái rõ ràng. Mọi trao đổi bảo hành nên thực hiện trên đơn để được hỗ trợ đúng quy trình.</p>
   <p>Mỗi gian hàng có giá và chính sách bảo hành riêng. Đọc mô tả trước khi đặt đơn; yêu cầu bảo hành trên sàn để được bảo vệ.</p>
 `;
 
 const SHARED_FAQS = [
   {
-    q: "Cách đặt hàng trên Vua MMO như thế nào?",
+    q: "Cách đặt hàng trên Vua Proxy như thế nào?",
     a: "Chọn sản phẩm → chọn gói phù hợp → nhấn mua/thanh toán trên trang. Sau khi thanh toán thành công, theo dõi đơn hàng và nhận thông tin bàn giao theo hướng dẫn của shop (thường qua email hoặc tin nhắn trên đơn)."
   },
   {
@@ -32,16 +32,16 @@ const SHARED_FAQS = [
   },
   {
     q: "Có thể hủy đơn hoặc hoàn tiền không?",
-    a: "Tùy trạng thái đơn và chính sách shop. Nếu chưa nhận hàng hoặc hàng không đúng mô tả, liên hệ shop trên đơn ngay; trường hợp không thống nhất được, dùng kênh hỗ trợ/khiếu nại trên sàn theo quy trình Vua MMO."
+    a: "Tùy trạng thái đơn và chính sách shop. Nếu chưa nhận hàng hoặc hàng không đúng mô tả, liên hệ shop trên đơn ngay; trường hợp không thống nhất được, dùng kênh hỗ trợ/khiếu nại trên sàn theo quy trình Vua Proxy."
   }
 ];
 
 function leafIntro(title){
   return `
       <h2>Tài khoản AI là gì?</h2>
-      <p>Tài khoản AI / sản phẩm số thuộc nhóm <strong>${title}</strong> là các gói truy cập phần mềm hoặc dịch vụ số do gian hàng cung cấp trên Vua MMO — giao nhận theo cam kết trên trang sản phẩm (đăng nhập, nâng cấp chính chủ, key kích hoạt…).</p>
-      <h2>Tại sao nên mua hàng trên Vua MMO</h2>
-      <p>Mua ${title} trên Vua MMO giúp bạn so sánh nhiều shop, thanh toán an toàn trên sàn và yêu cầu hỗ trợ ngay trên đơn hàng khi cần.</p>
+      <p>Tài khoản AI / sản phẩm số thuộc nhóm <strong>${title}</strong> là các gói truy cập phần mềm hoặc dịch vụ số do gian hàng cung cấp trên Vua Proxy — giao nhận theo cam kết trên trang sản phẩm (đăng nhập, nâng cấp chính chủ, key kích hoạt…).</p>
+      <h2>Tại sao nên mua hàng trên Vua Proxy</h2>
+      <p>Mua ${title} trên Vua Proxy giúp bạn so sánh nhiều shop, thanh toán an toàn trên sàn và yêu cầu hỗ trợ ngay trên đơn hàng khi cần.</p>
       <p>Mỗi gian hàng có giá và chính sách bảo hành riêng. Đọc mô tả trước khi đặt đơn; yêu cầu bảo hành trên sàn để được bảo vệ.</p>
     `;
 }
@@ -49,10 +49,10 @@ function leafIntro(title){
 function parentIntro(title, note){
   return `
       <h2>${title}</h2>
-      <p>${note || `Danh mục ${title} trên Vua MMO gom các sản phẩm số liên quan để bạn lọc nhanh theo nhu cầu.`}</p>
+      <p>${note || `Danh mục ${title} trên Vua Proxy gom các sản phẩm số liên quan để bạn lọc nhanh theo nhu cầu.`}</p>
       <p>Chọn danh mục con bên trái (CapCut, ChatGPT, Netflix…) hoặc xem toàn bộ sản phẩm trong nhóm này. So sánh giá nhiều shop, thanh toán trên sàn và yêu cầu bảo hành trên đơn hàng.</p>
-      <h2>Tại sao nên mua hàng trên Vua MMO</h2>
-      <p>Vua MMO kết nối nhiều người bán: giá rõ, giao nhận theo cam kết từng gian hàng, hỗ trợ trên đơn để được bảo vệ.</p>
+      <h2>Tại sao nên mua hàng trên Vua Proxy</h2>
+      <p>Vua Proxy kết nối nhiều người bán: giá rõ, giao nhận theo cam kết từng gian hàng, hỗ trợ trên đơn để được bảo vệ.</p>
     `;
 }
 
@@ -498,10 +498,10 @@ function renderIntroFaqReviews(){
     ? `Kết quả cho “${searchQuery}”`
     : c.title;
   document.getElementById("pageTitle").textContent = title;
-  if(searchQuery) document.title = `${title} | Vua MMO`;
+  if(searchQuery) document.title = `${title} | Vua Proxy`;
   else if(c.kind === "parent" && c.seoTitle) document.title = c.seoTitle;
-  else if(c.kind === "child") document.title = `Mua ${c.title} giá rẻ | Vua MMO`;
-  else document.title = `${title} | Vua MMO`;
+  else if(c.kind === "child") document.title = `Mua ${c.title} giá rẻ | Vua Proxy`;
+  else document.title = `${title} | Vua Proxy`;
 
   let crumb = `<a href="/">Trang chủ</a><span class="sep">›</span>`;
   if(searchQuery){

@@ -66,7 +66,7 @@
       '<div class="cart-panel">' +
       '<p class="cart-kicker">Giỏ hàng</p>' +
       "<h1>Giỏ hàng của bạn</h1>" +
-      '<p class="cart-lead">Tick chọn món, chỉnh số lượng rồi nhấn Mua hàng — thanh toán bằng ví Vua MMO.</p>' +
+      '<p class="cart-lead">Tick chọn món, chỉnh số lượng rồi nhấn Mua hàng — thanh toán bằng ví Vua Proxy.</p>' +
       '<div class="scart-toolbar">' +
       '<label class="scart-check"><input type="checkbox" id="pageCartAll"' +
       (allOn ? " checked" : "") +

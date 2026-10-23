@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Luna Proxy">
+  <rect width="120" height="120" rx="16" fill="#0B1220"/>
+  <defs>
+    <linearGradient id="lunaGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2F6BFF"/>
+      <stop offset="1" stop-color="#00C2FF"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="46" r="26" fill="url(#lunaGrad)"/>
+  <g fill="none" stroke="#fff" stroke-width="2.2" opacity=".95">
+    <ellipse cx="60" cy="46" rx="18" ry="8" transform="rotate(-28 60 46)"/>
+    <ellipse cx="60" cy="46" rx="18" ry="8" transform="rotate(28 60 46)"/>
+    <ellipse cx="60" cy="46" rx="8" ry="18"/>
+  </g>
+  <circle cx="72" cy="38" r="3.2" fill="#7DF0FF"/>
+  <circle cx="48" cy="54" r="3.2" fill="#7DF0FF"/>
+  <text x="60" y="92" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="800" fill="#fff" letter-spacing=".4">LUNA PROXY</text>
+</svg>

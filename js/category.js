@@ -3,7 +3,7 @@ const CATEGORY_META = {
     title: "Công Cụ AI",
     parent: {name:"Ứng dụng & Phần mềm khác", href:"/category?cat=ung-dung-phan-mem-khac"},
     match: p => p.cats.includes("Công Cụ AI"),
-    intro: "Danh mục Công Cụ AI tại Vua MMO tổng hợp các tài khoản AI phổ biến nhất hiện nay cho học tập, làm việc, lập trình, viết content, research và sáng tạo ảnh/video/âm thanh. Bạn có thể mua công cụ AI giá rẻ, chính chủ, giao nhanh — chọn theo đúng nhu cầu thay vì mua theo cảm tính.",
+    intro: "Danh mục Công Cụ AI tại Vua Proxy tổng hợp các tài khoản AI phổ biến nhất hiện nay cho học tập, làm việc, lập trình, viết content, research và sáng tạo ảnh/video/âm thanh. Bạn có thể mua công cụ AI giá rẻ, chính chủ, giao nhanh — chọn theo đúng nhu cầu thay vì mua theo cảm tính.",
     chips: ["Viết lách & Nghiên cứu","Lập trình","Ảnh & Video AI","Âm thanh AI"],
   },
   "hoc-tap": {
@@ -54,7 +54,7 @@ const params = new URLSearchParams(location.search);
 const catSlug = params.get("cat") || "cong-cu-ai";
 const meta = CATEGORY_META[catSlug] || CATEGORY_META["cong-cu-ai"];
 
-document.title = `${meta.title} Giá Rẻ | Vua MMO`;
+document.title = `${meta.title} Giá Rẻ | Vua Proxy`;
 document.getElementById("catTitle").textContent = meta.title;
 document.getElementById("catIntro").textContent = meta.intro;
 document.getElementById("catChips").innerHTML = meta.chips.map(c=>`<span class="category-chip">${c}</span>`).join("");

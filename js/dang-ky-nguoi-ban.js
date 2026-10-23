@@ -86,7 +86,7 @@
     } catch (_) {}
 
     form.reset();
-    toast("Đã gửi đăng ký. Vua MMO sẽ liên hệ sớm (demo).");
+    toast("Đã gửi đăng ký. Vua Proxy sẽ liên hệ sớm (demo).");
     form.querySelector(".seller-submit")?.blur();
   });
 

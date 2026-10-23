@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Oxylabs">
+  <rect width="120" height="120" rx="16" fill="#061A33"/>
+  <path d="M38 78 L60 28 L82 78 Z" fill="none" stroke="#5B9DFF" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M46 62 H74" stroke="#5B9DFF" stroke-width="7" stroke-linecap="round"/>
+  <text x="60" y="100" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="800" fill="#E8F1FF" letter-spacing=".3">OXYLABS</text>
+</svg>

@@ -114,6 +114,7 @@
     st.id = "vuammo-chat-media-css";
     st.textContent =
       ".chat-compose-form{position:relative}" +
+      ".chat-msg-text{white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}" +
       ".chat-compose-tools{display:flex;align-items:center;gap:2px;padding:0 2px 0 6px;flex-shrink:0}" +
       ".chat-tool-btn{appearance:none;border:0;background:transparent;width:36px;height:36px;border-radius:10px;cursor:pointer;color:#64748b;display:inline-flex;align-items:center;justify-content:center;padding:0}" +
       ".chat-tool-btn:hover,.chat-tool-btn.is-active{background:#f1f5f9;color:#0f172a}" +

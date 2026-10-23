@@ -1,4 +1,4 @@
-/* Wishlist localStorage for Vua MMO */
+/* Wishlist localStorage for Vua Proxy */
 (function () {
   const KEY = "vuammo_wish_v1";
 

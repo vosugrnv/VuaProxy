@@ -1,4 +1,4 @@
-/* Chat widget — Vua MMO support vs phòng chat từng shop */
+/* Chat widget — Vua Proxy support vs phòng chat từng shop */
 (function () {
   const fab = document.getElementById("chatFabBtn");
   const panel = document.getElementById("chatPanel");
@@ -14,15 +14,11 @@
 
   const SUPPORT = {
     id: "vuammo_support",
-    name: "Vua MMO",
-    avatar: "/images/logo-vuammo.png",
-    subtitle: "Hỗ trợ sàn · thường trả lời trong vài phút",
-    hello: "Xin chào 👋 Bạn cần Vua MMO hỗ trợ gì hôm nay?",
-    replies: [
-      "Cảm ơn bạn đã nhắn tin! Đội ngũ Vua MMO sẽ phản hồi trong ít phút.",
-      "Bạn vui lòng cho mình xin thêm thông tin sản phẩm bạn đang quan tâm nhé.",
-      "Vua MMO hỗ trợ 8:00 – 22:00 hàng ngày, kể cả cuối tuần. Bạn chờ mình chút nhé!"
-    ]
+    name: "Vua Proxy",
+    avatar: "/images/icon-vuaproxy.png?v=20260915logo1",
+    subtitle: "Hỗ trợ đơn proxy · thường trả lời trong vài phút",
+    hello: "",
+    replies: []
   };
 
   let mode = SUPPORT;
@@ -30,8 +26,19 @@
 
   function visitorKey() {
     try {
+      const u =
+        window.VuammoAuth && typeof VuammoAuth.getUser === "function"
+          ? VuammoAuth.getUser()
+          : null;
+      if (u && u.id) {
+        const uidKey = "u_" + String(u.id);
+        try {
+          localStorage.setItem("vuammo_visitor_key", uidKey);
+        } catch (_) {}
+        return uidKey;
+      }
       let k = localStorage.getItem("vuammo_visitor_key");
-      if (!k) {
+      if (!k || String(k).indexOf("u_") === 0) {
         k =
           "v_" +
           Math.random().toString(36).slice(2) +
@@ -79,23 +86,16 @@
   function shopModeFromEl(el) {
     const token = el.getAttribute("data-shop-token") || "";
     const name = el.getAttribute("data-shop-name") || "Shop";
-    const rawAvatar = el.getAttribute("data-shop-avatar") || "/images/logo-vuammo.png";
+    const rawAvatar = el.getAttribute("data-shop-avatar") || "/images/logo-vuaproxy.png?v=20260915logo1";
     const avatar = typeof absAssetUrl === "function" ? absAssetUrl(rawAvatar) : (rawAvatar.charAt(0) === "/" || /^https?:/i.test(rawAvatar) ? rawAvatar : "/" + rawAvatar);
     const room = el.getAttribute("data-shop-room") || ("shop_" + (token || name));
     return {
       id: room,
       name: name,
       avatar: avatar,
-      subtitle: "Chat trực tiếp với shop · gian hàng trên Vua MMO",
-      hello:
-        "Xin chào! Bạn đang chat với gian hàng " +
-        name +
-        ". Cứ hỏi về sản phẩm, bảo hành hoặc giao tài khoản nhé.",
-      replies: [
-        "Shop " + name + " đã nhận tin. Mình check đơn/sản phẩm giúp bạn ngay.",
-        "Bạn cần tư vấn gói nào của " + name + " ạ? Gửi giúp mình tên sản phẩm nhé.",
-        "Cảm ơn bạn đã inbox shop " + name + ". Mình phản hồi trong giờ làm việc 8:00–22:00."
-      ]
+      subtitle: "Chat trực tiếp với shop · gian hàng trên Vua Proxy",
+      hello: "",
+      replies: []
     };
   }
 
@@ -117,7 +117,7 @@
     if (fab) {
       fab.setAttribute(
         "aria-label",
-        mode.id === SUPPORT.id ? "Chat trực tiếp với Vua MMO" : "Chat trực tiếp với shop " + mode.name
+        mode.id === SUPPORT.id ? "Chat trực tiếp với Vua Proxy" : "Chat trực tiếp với shop " + mode.name
       );
       fab.classList.toggle("chat-fab--shop", mode.id !== SUPPORT.id);
     }
@@ -147,8 +147,7 @@
         return;
       }
     } catch (_) {}
-    appendMsg(mode.hello, "bot");
-    saveHistory();
+    // Tắt chat tự động — không chèn lời chào bot; chờ admin/shop trả lời thật.
   }
 
   function saveHistory() {
@@ -194,7 +193,7 @@
       const header = panel.querySelector(".chat-panel-header");
       if (header) header.insertAdjacentElement("afterend", inbox);
     }
-    if (mode.id === SUPPORT.id) inbox.href = "/tin-nhan/vuammo";
+    if (mode.id === SUPPORT.id) inbox.href = "/tin-nhan/vuaproxy";
     else inbox.href = shopChatUrl(mode);
   }
 
@@ -257,8 +256,16 @@
     });
   }
 
+  try {
+    if (new URLSearchParams(location.search).get("openChat") === "1") {
+      setTimeout(function () {
+        fab.click();
+      }, 400);
+    }
+  } catch (_) {}
+
   fab.addEventListener("click", function () {
-    // FAB luôn là kênh Vua MMO (hỗ trợ sàn) — bắt buộc đăng nhập
+    // FAB luôn là kênh Vua Proxy (hỗ trợ sàn) — bắt buộc đăng nhập
     requireChatLogin(location.pathname + location.search || "/").then(function (ok) {
       if (!ok) return;
       if (panel.hidden) {
@@ -283,19 +290,13 @@
       if (input) input.value = "";
       saveHistory();
       syncServer(text, "user");
-      const replies = mode.replies || SUPPORT.replies;
-      setTimeout(function () {
-        const reply = replies[Math.floor(Math.random() * replies.length)];
-        appendMsg(reply, "bot");
-        saveHistory();
-        syncServer(reply, "bot");
-      }, 700);
+      // Không auto-reply mỗi tin — chỉ chào 1 lần (loadHistory). Admin trả lời thật.
     });
   }
 
   function shopChatUrl(cfg) {
     const room = (cfg && cfg.id) || SUPPORT.id;
-    if (room === SUPPORT.id) return "/tin-nhan/vuammo";
+    if (room === SUPPORT.id) return "/tin-nhan/vuaproxy";
     const token = String(room).replace(/^shop_/, "");
     let slug = token;
     try {

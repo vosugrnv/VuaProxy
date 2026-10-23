@@ -1,4 +1,4 @@
-/* Vua MMO Admin — layout kiểu ZENA */
+/* Vua Proxy Admin — layout kiểu ZENA */
 :root{
   --adm-bg:#0f172a;
   --adm-side:#0b1220;
@@ -126,6 +126,24 @@ a{color:inherit}
 .adm-cell-sub{font-size:12px;color:#64748b;margin-top:2px;display:block}
 .adm-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center}
 .adm-row-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.adm-row-actions--orders{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(4.75rem,max-content));
+  gap:6px;
+  justify-content:end;
+  align-items:center;
+  flex-wrap:nowrap;
+}
+.adm-row-actions--orders > .btn,
+.adm-row-actions--orders > .adm-row-slot{
+  width:100%;
+  min-height:30px;
+  box-sizing:border-box;
+  white-space:nowrap;
+}
+.adm-row-slot{display:block;visibility:hidden;pointer-events:none}
+.adm-btn-warranty{border-color:#f59e0b!important;color:#b45309!important}
+.adm-btn-warranty:hover{background:#fffbeb!important}
 .btn{
   appearance:none;border:1px solid transparent;border-radius:9px;padding:8px 12px;font:inherit;
   font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;
@@ -210,6 +228,10 @@ a{color:inherit}
   background:#fff;border-radius:16px;padding:22px;width:100%;max-width:420px;
   box-shadow:0 20px 50px rgba(15,23,42,.2);
 }
+.adm-modal--wide{max-width:860px}
+.adm-stk-line{
+  width:100%;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px;font:inherit;font-size:12.5px;
+}
 .adm-modal h3{margin:0 0 8px;font-size:18px}
 .adm-modal p{margin:0 0 14px;color:#64748b;font-size:13px}
 .hidden{display:none!important}
@@ -235,6 +257,17 @@ a{color:inherit}
   padding:6px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#334155;
 }
 .adm-toolbar button:hover{background:#fff;border-color:#cbd5e1}
+/* Rich text editor (Quill) — same as Vua MMO */
+.adm-rte{border:1px solid #cbd5e1;border-radius:10px;overflow:hidden;background:#fff}
+.adm-rte .ql-toolbar.ql-snow{border:0;border-bottom:1px solid #e2e8f0;background:#f8fafc;padding:8px 10px;flex-wrap:wrap}
+.adm-rte .ql-container.ql-snow{border:0;font-family:inherit;font-size:14.5px;min-height:320px}
+.adm-rte .ql-editor{min-height:320px;line-height:1.65;color:#0f172a}
+.adm-rte .ql-editor.ql-blank::before{color:#94a3b8;font-style:normal}
+.adm-rte .ql-editor h1{font-size:1.75em;margin:.6em 0 .35em}
+.adm-rte .ql-editor h2{font-size:1.4em;margin:.55em 0 .3em}
+.adm-rte .ql-editor h3{font-size:1.2em;margin:.5em 0 .25em}
+.adm-rte .ql-editor img{max-width:100%;height:auto;border-radius:8px}
+.adm-rte-hint{margin:6px 0 0;font-size:12px;color:#64748b}
 .adm-file-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .adm-file-row input[type=file]{font-size:13px}
 .adm-compose-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
@@ -254,3 +287,35 @@ a{color:inherit}
   .adm-form-grid .span2,.adm-form-grid .span3{grid-column:span 1}
   .adm-split,.adm-split-3{grid-template-columns:1fr}
 }
+
+.adm-modal .adm-compose-actions{justify-content:flex-end;margin-top:8px}
+.adm-modal-bg{backdrop-filter:blur(2px)}
+
+.vpn-board{background:#0b1220;color:#e5e7eb;border-radius:16px;padding:16px}
+.vpn-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.vpn-head strong{display:block;font-size:16px}
+.vpn-head span{color:#94a3b8;font-size:13px}
+.vpn-host{margin-left:auto;font-size:13px;color:#94a3b8}
+.vpn-host b{color:#fff;font-weight:700}
+.vpn-tabs{display:flex;gap:8px;margin-bottom:14px}
+.vpn-tabs button{background:#111827;color:#cbd5e1;border:1px solid #1f2937;border-radius:10px;padding:8px 12px;font:inherit;font-weight:600;cursor:pointer}
+.vpn-tabs button.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.vpn-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vpn-card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:12px 14px}
+.vpn-card header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.vpn-card b{font-size:14px}
+.vpn-card header button{background:transparent;border:0;color:#94a3b8;cursor:pointer;font-size:16px}
+.vpn-card p{margin:6px 0;color:#94a3b8;font-size:12px}
+.vpn-tag{display:inline-block;background:#1e293b;color:#93c5fd;border-radius:999px;padding:2px 8px;font-size:11px}
+.vpn-tag.up{color:#86efac}
+.vpn-tag.assigned{color:#fcd34d}
+.vpn-tag.down,.vpn-tag.building{color:#fda4af}
+.vpn-empty,.vpn-note{color:#94a3b8;padding:12px 0}
+.vpn-logs p{font-family:ui-monospace,monospace;font-size:12px;margin:0 0 6px}
+.vpn-logs .error{color:#fda4af}
+.vpn-settings p{color:#94a3b8;font-size:13px}
+.vpn-settings .adm-field label{color:#cbd5e1}
+.vpn-sources{margin:12px 0 0;padding:0;list-style:none}
+.vpn-sources li{padding:8px 0;border-top:1px solid #1f2937;font-size:13px}
+.vpn-sources button{margin-left:8px}
+@media(max-width:800px){.vpn-grid{grid-template-columns:1fr}}

@@ -1,12 +1,18 @@
 /* Orders table + dispute + review */
 (function () {
-  const statusLabel = {
-    paid: "Đã thanh toán",
-    delivered: "Đã giao / đang bảo vệ",
-    disputed: "Đang khiếu nại",
-    released: "Đã giải ngân",
-    refunded: "Đã hoàn tiền"
-  };
+  function isHoldActive(o) {
+    return Boolean(o.holdUntil && new Date(o.holdUntil) > new Date());
+  }
+  function statusLabelOf(o) {
+    if (o.disputeStatus === "open" || o.status === "disputed") return "Khiếu nại";
+    if (["released", "refunded"].includes(o.status) || !isHoldActive(o)) return "Hoàn thành";
+    return "Chờ hoàn thành";
+  }
+  function statusClassOf(o) {
+    if (o.disputeStatus === "open" || o.status === "disputed") return "disputed";
+    if (["released", "refunded"].includes(o.status) || !isHoldActive(o)) return "released";
+    return "delivered";
+  }
 
   function escapeHtml(s) {
     return String(s || "")
@@ -150,11 +156,11 @@
               "</td><td>" +
               escapeHtml(formatDate(o.createdAt)) +
               '</td><td><span class="dash-status dash-status--' +
-              escapeHtml(o.status) +
+              escapeHtml(statusClassOf(o)) +
               '" title="' +
-              escapeHtml(statusLabel[o.status] || o.status) +
+              escapeHtml(statusLabelOf(o)) +
               '">' +
-              escapeHtml(statusLabel[o.status] || o.status) +
+              escapeHtml(statusLabelOf(o)) +
               '</span></td><td><div class="dash-order-actions">' +
               (canDispute(o)
                 ? '<button type="button" class="dash-act dash-act--outline js-dispute">Khiếu nại</button>'
@@ -195,7 +201,7 @@
         escapeHtml(o.code) +
         '</h3><button type="button" class="btn btn-ghost btn-sm" data-close>×</button></div>' +
         "<p><strong>Trạng thái:</strong> " +
-        escapeHtml(statusLabel[o.status] || o.status) +
+        escapeHtml(statusLabelOf(o)) +
         "</p>" +
         "<p><strong>Sản phẩm:</strong> " +
         escapeHtml(o.itemNames || "—") +

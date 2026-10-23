@@ -1,26 +1,23 @@
 /* Tài khoản thành viên — không sidebar, lọc đơn + phân trang */
 (function () {
-  const STATUS = {
-    paid: "Đã thanh toán",
-    delivered: "Đã giao / đang bảo vệ",
-    disputed: "Đang khiếu nại",
-    released: "Đã giải ngân",
-    refunded: "Đã hoàn tiền"
-  };
+  function isHoldActive(o) {
+    return Boolean(o.holdUntil && new Date(o.holdUntil) > new Date());
+  }
+
+  function isPaidOrder(o) {
+    return !["pending_payment", "expired", "pending"].includes(String(o.status || ""));
+  }
 
   function orderStatusLabel(o) {
-    if (o.disputeStatus === "rejected") return "Từ chối KN";
-    if (o.disputeStatus === "resolved" || o.status === "refunded") return "Đã hoàn tiền";
-    if (o.disputeStatus === "withdrawn" && o.status === "delivered") {
-      return "Đã giao / đang bảo vệ";
-    }
-    return STATUS[o.status] || o.status;
+    if (o.disputeStatus === "open" || o.status === "disputed") return "Khiếu nại";
+    if (["released", "refunded"].includes(o.status) || !isHoldActive(o)) return "Hoàn thành";
+    return "Chờ hoàn thành";
   }
 
   function orderStatusClass(o) {
-    if (o.disputeStatus === "rejected") return "disputed";
-    if (o.disputeStatus === "resolved" || o.status === "refunded") return "refunded";
-    return o.status;
+    if (o.disputeStatus === "open" || o.status === "disputed") return "disputed";
+    if (["released", "refunded"].includes(o.status) || !isHoldActive(o)) return "released";
+    return "delivered";
   }
   const ORDER_PAGE = 50;
   const WALLET_PAGE = 12;
@@ -48,7 +45,7 @@
 
   function tabFromHash() {
     const h = (location.hash || "").replace(/^#/, "");
-    if (["profile", "orders", "cart", "wallet", "security"].includes(h)) return h;
+    if (["profile", "orders", "wallet", "security"].includes(h)) return h;
     return "profile";
   }
 
@@ -97,7 +94,6 @@
       '<button type="button" class="acct-tab" role="tab" data-acct-tab="profile">Thông tin</button>' +
       '<button type="button" class="acct-tab" role="tab" data-acct-tab="orders">Đơn hàng</button>' +
       '<a class="acct-tab" href="/tin-nhan">Tin nhắn</a>' +
-      '<button type="button" class="acct-tab" role="tab" data-acct-tab="cart">Giỏ hàng</button>' +
       '<button type="button" class="acct-tab" role="tab" data-acct-tab="wallet">Ví &amp; nạp</button>' +
       '<button type="button" class="acct-tab" role="tab" data-acct-tab="security">Bảo mật</button>' +
       '<button type="button" class="acct-tab acct-tab--out" id="acctLogoutBtn">Đăng xuất</button>' +
@@ -105,7 +101,6 @@
       '<div class="acct-body">' +
       '<section class="acct-panel" data-acct-panel="profile" hidden></section>' +
       '<section class="acct-panel" data-acct-panel="orders" hidden></section>' +
-      '<section class="acct-panel" data-acct-panel="cart" hidden></section>' +
       '<section class="acct-panel" data-acct-panel="wallet" hidden></section>' +
       '<section class="acct-panel" data-acct-panel="security" hidden></section>' +
       "</div></div>"
@@ -362,7 +357,7 @@
       const s = shopByName(name);
       if (s) token = String(s.token || "").trim();
     }
-    let avatar = "/images/logo-vuammo.png";
+    let avatar = "/images/logo-vuaproxy.png?v=20260915logo1";
     if (token && typeof shopByToken === "function") {
       const s = shopByToken(token);
       if (s) {
@@ -418,16 +413,14 @@
   async function fillOrders(panel) {
     panel.innerHTML =
       "<h2>Lịch sử đơn hàng</h2>" +
-      '<p class="dash-lead">Khiếu nại trong thời gian bảo vệ · Đánh giá sau khi nhận hàng · Chat trực tiếp với shop.</p>' +
+      '<p class="dash-lead">Trong thời hạn đơn: Chờ hoàn thành + nút Khiếu nại. Hết hạn → Hoàn thành (ẩn khiếu nại).</p>' +
       '<div class="acct-filters">' +
       '<input type="search" id="ordSearch" class="acct-search" placeholder="Tìm mã đơn, tên SP, email giao…" autocomplete="off">' +
       '<select id="ordStatus" class="acct-select">' +
       '<option value="all">Tất cả trạng thái</option>' +
-      '<option value="delivered">Đang bảo vệ</option>' +
+      '<option value="waiting">Chờ hoàn thành</option>' +
+      '<option value="done">Hoàn thành</option>' +
       '<option value="disputed">Khiếu nại</option>' +
-      '<option value="released">Đã giải ngân</option>' +
-      '<option value="refunded">Hoàn tiền</option>' +
-      '<option value="paid">Đã thanh toán</option>' +
       "</select>" +
       '<button type="button" class="dash-act dash-act--outline" id="ordApply">Lọc</button>' +
       '<a class="dash-act dash-act--ghost" href="/danh-gia-cua-toi">Xem tất cả đánh giá</a>' +
@@ -464,7 +457,10 @@
         .toLowerCase();
       const st = document.getElementById("ordStatus")?.value || "all";
       return allOrders.filter((o) => {
-        if (st !== "all" && o.status !== st) return false;
+        if (st === "waiting" && orderStatusLabel(o) !== "Chờ hoàn thành") return false;
+        if (st === "done" && orderStatusLabel(o) !== "Hoàn thành") return false;
+        if (st === "disputed" && orderStatusLabel(o) !== "Khiếu nại") return false;
+        if (st !== "all" && !["waiting", "done", "disputed"].includes(st) && o.status !== st) return false;
         if (!q) return true;
         const code = String(o.code || "").toLowerCase();
         const name = String(o.itemNames || "").toLowerCase();
@@ -578,20 +574,18 @@
     }
 
     function openOrderChat(o) {
-      const shop = shopFromOrder(o);
-      if (!shop.token) {
-        VuammoApi.showToast("Đơn này chưa gắn shop để chat");
+      const fab = document.getElementById("chatFabBtn");
+      if (fab) {
+        fab.click();
+        if (window.VuammoApi && VuammoApi.showToast) {
+          VuammoApi.showToast(
+            o && o.code ? "Chat hỗ trợ · đơn #" + o.code : "Mở chat hỗ trợ Vua Proxy"
+          );
+        }
         return;
       }
-      let slug = shop.slug || shop.name || shop.token;
-      try {
-        if (typeof shopByToken === "function") {
-          const s = shopByToken(shop.token);
-          if (s) slug = s.slug || s.name || slug;
-        }
-      } catch (_) {}
-      const q = o.code ? ("?order=" + encodeURIComponent(String(o.code))) : "";
-      location.href = "/tin-nhan/" + encodeURIComponent(slug) + q;
+      const q = o && o.code ? "?openChat=1&order=" + encodeURIComponent(String(o.code)) : "?openChat=1";
+      location.href = "/" + q;
     }
 
     async function confirmWithdraw(o) {
@@ -662,7 +656,7 @@
             : "") +
           "</p><p><strong>Đặt lúc:</strong> " +
           esc(formatDate(o.createdAt)) +
-          "</p><p><strong>Bảo vệ đến:</strong> " +
+          "</p><p><strong>Hiệu lực / khiếu nại đến:</strong> " +
           esc(formatDate(o.holdUntil)) +
           '</p><div class="dash-modal-recv"><p class="dash-modal-recv-title">Sản phẩm đã nhận</p>' +
           lines +
@@ -679,7 +673,7 @@
           (o.reviewed
             ? '<button type="button" class="dash-act dash-act--ghost" id="modalViewReview">Đã đánh giá</button>'
             : "") +
-          '<button type="button" class="dash-act dash-act--chat" id="modalChat">Chat shop</button>' +
+          '<button type="button" class="dash-act dash-act--chat" id="modalChat">Chat hỗ trợ</button>' +
           "</div>"
       );
       document.getElementById("modalDispute")?.addEventListener("click", () => showDispute(o));
@@ -696,7 +690,7 @@
         '<div class="dash-modal-head"><h3>Khiếu nại #' +
           esc(o.code) +
           '</h3><button type="button" class="dash-act dash-act--ghost" data-close>×</button></div>' +
-          "<p>Bảo vệ đến <strong>" +
+          "<p>Hiệu lực đến <strong>" +
           esc(formatDate(o.holdUntil)) +
           "</strong>. Mô tả rõ vấn đề (≥ 5 ký tự).</p>" +
           '<form id="disputeForm"><textarea id="disputeReason" rows="4" required minlength="5"></textarea>' +
@@ -778,7 +772,7 @@
       box.innerHTML = "Đang tải...";
       try {
         const data = await VuammoApi.api("/orders");
-        allOrders = (data.orders || []).slice().sort((a, b) => {
+        allOrders = (data.orders || []).filter(isPaidOrder).slice().sort((a, b) => {
           return new Date(b.createdAt) - new Date(a.createdAt);
         });
         page = 1;
@@ -828,7 +822,7 @@
         CartStore.setSelectedIds([]);
         panel.innerHTML =
           "<h2>Giỏ hàng</h2>" +
-          '<p class="dash-lead">Giỏ trống — khám phá tài khoản số đang bán chạy tại Vua MMO.</p>' +
+          '<p class="dash-lead">Giỏ trống — khám phá tài khoản số đang bán chạy tại Vua Proxy.</p>' +
           '<div class="dash-empty"><p>Giỏ hàng đang trống.</p>' +
           '<a class="acct-btn acct-btn--primary" href="/tat-ca-san-pham">Tiếp tục mua sắm</a></div>';
         return;
@@ -1157,7 +1151,6 @@
     if (!panel) return;
     if (tab === "profile") fillProfile(panel, VuammoAuth.getUser() || user);
     else if (tab === "orders") await fillOrders(panel);
-    else if (tab === "cart") fillCart(panel);
     else if (tab === "wallet") await fillWallet(panel, VuammoAuth.getUser() || user);
     else if (tab === "security") fillSecurity(panel);
   }

@@ -91,7 +91,7 @@ function sellerJoinText(s) {
 }
 function sellerAvatar(s) {
   if (typeof shopAvatarUrl === "function") return shopAvatarUrl(s);
-  const raw = s.avatar || (s.slug ? ("/images/shops/" + s.slug + ".svg") : "/images/logo-vuammo.png");
+  const raw = s.avatar || (s.slug ? ("/images/shops/" + s.slug + ".svg") : "/images/logo-vuaproxy.png?v=20260915logo1");
   return typeof absAssetUrl === "function" ? absAssetUrl(raw) : raw;
 }
 
@@ -145,8 +145,8 @@ function absoluteUrl(){
 }
 
 function applySeo(){
-  const title = product.name + " | Mua giá rẻ tại Vua MMO";
-  const desc = "Mua " + product.name + " chính chủ tại Vua MMO. Giá từ " + money(product.price) + ", giao tài khoản 5–15 phút, bảo hành 1 đổi 1. Xem gói, đánh giá và FAQ.";
+  const title = product.name + " | Mua proxy tại Vua Proxy";
+  const desc = "Mua " + product.name + " chính chủ tại Vua Proxy. Giá từ " + money(product.price) + ", giao proxy tự động, bảo hành 1 đổi 1. Xem gói, đánh giá và FAQ.";
   document.title = title;
 
   const setMeta = (attr, key, content) => {
@@ -189,7 +189,7 @@ function applySeo(){
     image: [product.image],
     description: desc,
     sku: String(product.id),
-    brand: {"@type":"Brand", name:"Vua MMO"},
+    brand: {"@type":"Brand", name:"Vua Proxy"},
     category: cat.parentLabel + " > " + cat.label,
     offers: {
       "@type":"Offer",
@@ -317,7 +317,7 @@ function faqItems(name){
   return [
     {
       q: name + " của " + shop + " giao hàng như thế nào?",
-      a: name + " do " + shop + " cung cấp hoàn toàn online trên Vua MMO. Bạn đặt mua trên trang sản phẩm và nhận thông tin tài khoản qua hệ thống sau khi thanh toán thành công (thường trong vài phút)."
+      a: name + " do " + shop + " cung cấp hoàn toàn online trên Vua Proxy. Bạn đặt mua trên trang sản phẩm và nhận thông tin tài khoản qua hệ thống sau khi thanh toán thành công (thường trong vài phút)."
     },
     {
       q: "Giá " + name + " tại " + shop + " là bao nhiêu?",
@@ -329,11 +329,11 @@ function faqItems(name){
     },
     {
       q: "Mua " + name + " từ " + shop + " có được bảo hành không?",
-      a: "Có. " + shop + " cam kết bảo hành 1 đổi 1 " + name + " trong suốt thời hạn gói đã mua. Nếu tài khoản lỗi do phía cung cấp, shop hỗ trợ cấp lại hoặc hoàn tiền theo chính sách ghi trên sản phẩm."
+      a: "Có. " + shop + " cam kết bảo hành 1 đổi 1 " + name + " trong suốt thời hạn gói đã mua. Nếu tài khoản lỗi do phía cung cấp, Vua Proxy hỗ trợ cấp lại hoặc hoàn tiền theo chính sách ghi trên sản phẩm."
     },
     {
       q: "Thanh toán " + name + " với " + shop + " bằng cách nào?",
-      a: "Bạn thanh toán đơn hàng của " + shop + " bằng chuyển khoản ngân hàng (QR) hoặc số dư ví trên sàn. Sau khi xác nhận thanh toán, " + shop + " tự động bàn giao " + name + " kèm hướng dẫn kích hoạt qua email."
+      a: "Bạn thanh toán đơn hàng của " + shop + " bằng chuyển khoản ngân hàng (QR) hoặc số dư ví trên website. Sau khi xác nhận thanh toán, " + shop + " tự động bàn giao " + name + " kèm hướng dẫn kích hoạt qua email."
     }
   ];
 }
@@ -543,15 +543,15 @@ document.getElementById("prodTitle").textContent = product.name;
 (function fillProdMeta() {
   const href = seller.href || (seller.slug ? ("/" + seller.slug) : null);
   const sellerLabel = href
-    ? ('Bán bởi <a class="product-meta-seller" href="' + esc(href) + '"><b>' + esc(shopName) + "</b></a>")
-    : ("Bán bởi <b>" + esc(shopName) + "</b>");
+    ? ('Cung cấp bởi <a class="product-meta-seller" href="' + esc(href) + '"><b>' + esc(shopName) + "</b></a>")
+    : ("Cung cấp bởi <b>" + esc(shopName) + "</b>");
   document.getElementById("prodMeta").innerHTML =
     '<span class="stars">★★★★★</span> ' + ratingVal +
     ' <span class="dot">·</span> ' + reviewCount.toLocaleString("vi-VN") + ' đánh giá' +
     ' <span class="dot">·</span> ' + soldCount.toLocaleString("vi-VN") + ' đã bán' +
     ' <span class="dot">·</span> ' + sellerLabel +
     ' <span class="dot">·</span> Mã #' + product.id +
-    ' <span class="product-verified" title="Đơn hàng được sàn Vua MMO xác minh và bảo vệ">' +
+    ' <span class="product-verified" title="Đơn hàng được Vua Proxy xác minh và bảo vệ">' +
     '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2l7 3v6c0 5-3.4 8.4-7 10-3.6-1.6-7-5-7-10V5l7-3zm-1.1 13.2l5.6-5.6-1.4-1.4-4.2 4.2-2-2-1.4 1.4 3.4 3.4z"/></svg>' +
     "Giao dịch đã xác minh</span>";
 })();
@@ -717,49 +717,17 @@ function currentCartItem() {
     parentId: String(product.id)
   };
 }
-document.getElementById("addToCartBtn").addEventListener("click", () => {
-  if (typeof addToCart === "function") addToCart(currentCartItem());
-});
-document.getElementById("buyNowBtn").addEventListener("click", () => {
-  if (typeof addToCart === "function") addToCart(currentCartItem());
+document.getElementById("buyNowBtn")?.addEventListener("click", () => {
+  const item = currentCartItem();
+  if (typeof addToCart === "function") addToCart(item);
   location.href = "/thanh-toan";
 });
-
-(function wireProductWish() {
-  const row = document.querySelector(".product-buy-row");
-  if (!row || document.getElementById("productWishBtn")) return;
-  const shop = typeof shopName !== "undefined" ? shopName : (product.seller || "Vua MMO");
-  const on = window.WishStore && WishStore.has(product.id);
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.id = "productWishBtn";
-  btn.className = "btn btn-outline product-wish-btn" + (on ? " active" : "");
-  btn.setAttribute("aria-label", "Thêm wishlist");
-  btn.dataset.wishId = String(product.id);
-  btn.dataset.wishName = product.name || "";
-  btn.dataset.wishPrice = String(product.price || 0);
-  btn.dataset.wishRegular = String(product.regular || "");
-  btn.dataset.wishImage = product.image || "";
-  btn.dataset.wishSeller = shop;
-  btn.dataset.wishRating = String(product.rating || "");
-  btn.innerHTML =
-    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21s-7-4.4-9.5-8.6C.7 8.8 2 5 5.6 4.2 8 3.6 10 4.7 12 7c2-2.3 4-3.4 6.4-2.8C22 5 23.3 8.8 21.5 12.4 19 16.6 12 21 12 21z"/></svg>' +
-    "<span>Yêu thích</span>";
-  btn.addEventListener("click", () => {
-    if (typeof toggleWish === "function") toggleWish(btn);
-    const span = btn.querySelector("span");
-    if (span) span.textContent = btn.classList.contains("active") ? "Đã thích" : "Yêu thích";
-  });
-  if (on) {
-    const span = btn.querySelector("span");
-    if (span) span.textContent = "Đã thích";
-  }
-  row.appendChild(btn);
-})();
+document.getElementById("addToCartBtn")?.remove();
+document.getElementById("productWishBtn")?.remove();
 
 document.getElementById("prodDesc").innerHTML =
-  "<h2>Vì sao nên mua " + esc(product.name) + " tại Vua MMO?</h2>" +
-  "<p><strong>" + esc(product.name) + "</strong> tại Vua MMO là tài khoản/gói chính chủ, được kiểm tra trước khi bàn giao, cam kết hoạt động ổn định trong suốt thời hạn sử dụng. Giao tự động qua email chỉ trong 5–15 phút sau thanh toán.</p>" +
+  "<h2>Vì sao nên mua " + esc(product.name) + " tại Vua Proxy?</h2>" +
+  "<p><strong>" + esc(product.name) + "</strong> tại Vua Proxy là tài khoản/gói chính chủ, được kiểm tra trước khi bàn giao, cam kết hoạt động ổn định trong suốt thời hạn sử dụng. Giao tự động qua email chỉ trong 5–15 phút sau thanh toán.</p>" +
   "<ul>" +
   "<li>Đầy đủ tính năng như bản trả phí gốc.</li>" +
   "<li>Bảo hành 1 đổi 1 trọn thời hạn nếu lỗi từ nhà cung cấp.</li>" +
@@ -767,7 +735,7 @@ document.getElementById("prodDesc").innerHTML =
   "<li>Hoàn tiền 100% nếu không giao được trong thời gian cam kết.</li>" +
   "</ul>" +
   "<h2>Hướng dẫn kích hoạt &amp; bảo hành</h2>" +
-  "<p>Sau khi đặt hàng thành công, hệ thống gửi thông tin " + esc(product.name) + " kèm hướng dẫn kích hoạt qua email. Cần hỗ trợ thêm, đội ngũ CSKH Vua MMO sẵn sàng qua chat trên website.</p>";
+  "<p>Sau khi đặt hàng thành công, hệ thống gửi thông tin " + esc(product.name) + " kèm hướng dẫn kích hoạt qua email. Cần hỗ trợ thêm, đội ngũ CSKH Vua Proxy sẵn sàng qua chat trên website.</p>";
 
 document.getElementById("prodFaq").innerHTML =
   "<h2>Câu hỏi thường gặp</h2>" +
@@ -835,7 +803,7 @@ document.getElementById("relatedGrid").innerHTML =
     '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>Chat</a>' +
     (href
       ? '<a href="' + esc(href) + '" class="product-seller-bar-btn product-seller-bar-btn-shop">' +
-        '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M4 7h16l-1.2 12.2A2 2 0 0 1 16.81 21H7.19a2 2 0 0 1-1.99-1.8L4 7zm4-3h8l1 2H7l1-2z"/></svg>Xem shop</a>'
+        '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M4 7h16l-1.2 12.2A2 2 0 0 1 16.81 21H7.19a2 2 0 0 1-1.99-1.8L4 7zm4-3h8l1 2H7l1-2z"/></svg>Xem sản phẩm</a>'
       : "") +
     "</div></aside>";
 
@@ -855,13 +823,13 @@ document.getElementById("relatedGrid").innerHTML =
     '<div class="product-seller-head">' +
     '<img class="product-seller-avatar" src="' + esc(avatar) + '" alt="' + esc(shopName) + '">' +
     "<div><h2>Giới thiệu " + esc(shopName) + "</h2>" +
-    '<p class="product-seller-sub">Gian hàng trên Vua MMO · <span class="product-seller-verified-inline">Giao dịch đã xác minh</span></p></div></div>' +
+    '<p class="product-seller-sub">Gian hàng trên Vua Proxy · <span class="product-seller-verified-inline">Giao dịch đã xác minh</span></p></div></div>' +
     "<p>" + nameHtml + " " + esc(introFocus) +
     ". Đang bán <strong>" + esc(product.name) +
-    "</strong> — giao tự động, bảo hành rõ ràng, hỗ trợ nhanh trên sàn.</p>" +
+    "</strong> — giao tự động, bảo hành rõ ràng, hỗ trợ nhanh trên website.</p>" +
     '<div class="product-shop-actions">' +
-    (href ? '<a class="btn btn-outline" href="' + esc(href) + '">Xem shop</a>' : "") +
-    '<a class="btn btn-primary js-open-shop-chat" href="#"' + chatAttrs + ">Chat shop</a>" +
+    (href ? '<a class="btn btn-outline" href="' + esc(href) + '">Xem sản phẩm</a>' : "") +
+    '<a class="btn btn-primary js-open-shop-chat" href="#"' + chatAttrs + ">Chat hỗ trợ</a>" +
     '<a class="btn btn-outline js-open-chat" href="#">Chat sàn</a>' +
     "</div>";
 })();

@@ -1,4 +1,4 @@
-/* Auth + header account menu for Vua MMO */
+/* Auth + header account menu for Vua Proxy */
 (function () {
   let currentUser = null;
 

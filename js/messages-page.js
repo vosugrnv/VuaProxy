@@ -5,15 +5,11 @@
     roomId: SUPPORT_ID,
     channel: "support",
     shopToken: "",
-    name: "Vua MMO",
-    avatar: "/images/logo-vuammo.png",
+    name: "Vua Proxy",
+    avatar: "/images/icon-vuaproxy.png?v=20260915logo1",
     subtitle: "Hỗ trợ sàn · thường trả lời trong vài phút",
-    hello: "Xin chào 👋 Bạn cần Vua MMO hỗ trợ gì hôm nay?",
-    replies: [
-      "Cảm ơn bạn đã nhắn tin! Đội ngũ Vua MMO sẽ phản hồi trong ít phút.",
-      "Bạn vui lòng cho mình xin thêm thông tin đơn hàng hoặc sản phẩm nhé.",
-      "Vua MMO hỗ trợ 8:00 – 22:00 hàng ngày. Bạn chờ mình chút nhé!"
-    ]
+    hello: "",
+    replies: []
   };
 
   const listEl = document.getElementById("msgThreadList");
@@ -45,9 +41,23 @@
 
   function visitorKey() {
     try {
+      const u =
+        window.VuammoAuth && typeof VuammoAuth.getUser === "function"
+          ? VuammoAuth.getUser()
+          : null;
+      if (u && u.id) {
+        const uidKey = "u_" + String(u.id);
+        try {
+          localStorage.setItem("vuammo_visitor_key", uidKey);
+        } catch (_) {}
+        return uidKey;
+      }
       let k = localStorage.getItem("vuammo_visitor_key");
-      if (!k) {
-        k = "v_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      if (!k || String(k).indexOf("u_") === 0) {
+        k =
+          "v_" +
+          Math.random().toString(36).slice(2) +
+          Date.now().toString(36);
         localStorage.setItem("vuammo_visitor_key", k);
       }
       return k;
@@ -71,10 +81,10 @@
       .replace(/(^-|-$)/g, "");
   }
 
-  /** URL-facing key: /tin-nhan/phuongshop hoặc /tin-nhan/vuammo */
+  /** URL-facing key: /tin-nhan/phuongshop hoặc /tin-nhan/vuaproxy */
   function roomPublicKey(room) {
-    if (!room) return "vuammo";
-    if (room.roomId === SUPPORT_ID || room.channel === "support") return "vuammo";
+    if (!room) return "vuaproxy";
+    if (room.roomId === SUPPORT_ID || room.channel === "support") return "vuaproxy";
     const token = room.shopToken || String(room.roomId || "").replace(/^shop_/, "");
     if (typeof shopByToken === "function") {
       const shop = shopByToken(token);
@@ -103,8 +113,10 @@
     if (
       !key ||
       key === "vuammo" ||
+      key === "vuaproxy" ||
       key === "support" ||
       key === "vuammo_support" ||
+      key === "vuaproxy_support" ||
       key === SUPPORT_ID
     ) {
       return SUPPORT_ID;
@@ -140,7 +152,7 @@
   function shopMeta(token, nameHint) {
     const t = String(token || "").trim();
     let name = String(nameHint || "").trim() || "Shop";
-    let avatar = "/images/logo-vuammo.png";
+    let avatar = "/images/icon-vuaproxy.png?v=20260915logo1";
     if (t && typeof shopByToken === "function") {
       const s = shopByToken(t);
       if (s) {
@@ -172,18 +184,10 @@
       name: isShop ? meta.name : SUPPORT.name,
       avatar: isShop ? meta.avatar : SUPPORT.avatar,
       subtitle: isShop
-        ? "Gian hàng trên Vua MMO"
+        ? "Gian hàng trên Vua Proxy"
         : SUPPORT.subtitle,
-      hello: isShop
-        ? "Xin chào! Bạn đang chat với " + (meta.name || "shop") + ". Hãy gửi câu hỏi của bạn."
-        : SUPPORT.hello,
-      replies: isShop
-        ? [
-            "Shop đã nhận tin. Mình check giúp bạn ngay.",
-            "Bạn cần hỗ trợ gì thêm ạ?",
-            "Cảm ơn bạn đã inbox. Shop phản hồi trong giờ 8:00–22:00."
-          ]
-        : SUPPORT.replies,
+      hello: "",
+      replies: [],
       lastBody: partial.lastBody != null ? partial.lastBody : prev.lastBody || "",
       lastAt: partial.lastAt || prev.lastAt || null,
       msgCount: partial.msgCount != null ? partial.msgCount : prev.msgCount || 0,
@@ -226,7 +230,7 @@
     if (countEl) countEl.textContent = list.length + " hội thoại";
     listEl.innerHTML = list
       .map((r) => {
-        const preview = r.lastBody || (r.roomId === SUPPORT_ID ? "Hỗ trợ sàn Vua MMO" : "Chat với shop");
+        const preview = r.lastBody || (r.roomId === SUPPORT_ID ? "Hỗ trợ sàn Vua Proxy" : "Chat với shop");
         const on = r.roomId === activeId ? " is-active" : "";
         const unread = Number(r.unread || 0) > 0;
         return (
@@ -378,8 +382,7 @@
       room.lastBody = last.text || (last.attachmentUrl ? "[Đã gửi tệp đính kèm]" : room.lastBody);
       if (last.at) room.lastAt = last.at;
     } else {
-      appendMsg(room.hello, "bot");
-      saveLocal(id);
+      // Tắt chat tự động — không chèn lời chào bot khi phòng trống.
     }
     room.unread = 0;
     try {
@@ -432,17 +435,7 @@
       }
     } catch (_) {}
 
-    if (hasAttach) return;
-    const replies = room.replies || SUPPORT.replies;
-    setTimeout(() => {
-      if (activeId !== room.roomId) return;
-      const reply = replies[Math.floor(Math.random() * replies.length)];
-      appendMsg(reply, "bot");
-      room.lastBody = reply;
-      room.lastAt = new Date().toISOString();
-      saveLocal(activeId);
-      renderList();
-    }, 700);
+    // Không auto-reply mỗi tin; lời chào chỉ hiện 1 lần khi phòng trống.
   }
 
   function scanLocalRooms() {
@@ -562,13 +555,7 @@
       const roomId = resolvePeerToRoomId(want);
       const seeded = upsertRoom({ roomId });
       if (orderCode && seeded && seeded.channel === "shop") {
-        seeded.hello =
-          "Xin chào! Bạn đang chat với " +
-          seeded.name +
-          " về đơn #" +
-          orderCode +
-          ". Hãy mô tả vấn đề hoặc câu hỏi của bạn.";
-        seeded.subtitle = "Chat về đơn #" + orderCode + " · gian hàng trên Vua MMO";
+        seeded.subtitle = "Chat về đơn #" + orderCode + " · gian hàng trên Vua Proxy";
       }
       renderList();
       await selectRoom(roomId);

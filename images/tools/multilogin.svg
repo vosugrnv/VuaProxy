@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Multilogin">
+  <rect width="120" height="120" rx="28" fill="#0B1220"/>
+  <path d="M28 88 V36 L48 68 L60 44 L72 68 L92 36 V88" fill="none" stroke="url(#m)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="m" x1="28" y1="36" x2="92" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2F6BFF"/>
+      <stop offset=".5" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+</svg>

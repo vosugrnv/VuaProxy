@@ -54,7 +54,9 @@
     })
     .then(function (data) {
       mergeProducts(data.products || []);
-      mergeShops(data.shops || []);
+      try {
+        mergeShops(data.shops || []);
+      } catch (_) {}
       return data;
     })
     .catch(function () {

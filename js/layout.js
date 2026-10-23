@@ -67,15 +67,22 @@ window.showToast = function showToast(msg){
   toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);
 };
 
+/* Delegation: survives site-header rebuild of #catMenuBtn/#menuBtn */
 const drawer = document.getElementById("drawer");
 const backdrop = document.getElementById("drawerBackdrop");
-function closeDrawer(){ drawer.classList.remove("open"); backdrop.classList.remove("open"); }
-function openDrawer(){ drawer.classList.add("open"); backdrop.classList.add("open"); }
-document.getElementById("menuBtn")?.addEventListener("click", openDrawer);
-backdrop?.addEventListener("click", closeDrawer);
-drawer?.querySelectorAll("a").forEach(a=>a.addEventListener("click", closeDrawer));
-document.getElementById("catMenuBtn")?.addEventListener("click", openDrawer);
-document.getElementById("sideNavToggle")?.addEventListener("click", openDrawer);
+function closeDrawer(){
+  drawer?.classList.remove("open");
+  backdrop?.classList.remove("open");
+}
+function openDrawer(){
+  drawer?.classList.add("open");
+  backdrop?.classList.add("open");
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#catMenuBtn, #menuBtn, #sideNavToggle")) openDrawer();
+  if (e.target.closest("#drawerBackdrop")) closeDrawer();
+  if (e.target.closest("#drawer a")) closeDrawer();
+});
 
 /* Gỡ pill tên+số dư cũ — không rebuild header (tránh phá dropdown) */
 (function stripLegacyWalletPill() {

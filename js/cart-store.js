@@ -1,4 +1,4 @@
-/* localStorage cart for Vua MMO */
+/* localStorage cart for Vua Proxy */
 (function () {
   const KEY = "vuammo_cart_v1";
   const SELECT_KEY = "vuammo_cart_selected_v1";

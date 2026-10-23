@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="IPRoyal">
+  <rect width="120" height="120" rx="16" fill="#2A0A3D"/>
+  <path d="M36 48 L44 36 L52 46 L60 30 L68 46 L76 36 L84 48 L78 70 H42 Z" fill="#C084FC"/>
+  <rect x="44" y="70" width="32" height="8" rx="2" fill="#E9D5FF"/>
+  <text x="60" y="100" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="800" fill="#fff">IPRoyal</text>
+</svg>

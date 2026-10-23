@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://vuammovn.pro/sitemap.xml
-Sitemap: https://vuammovn.pro/sitemap-index.xml
+Sitemap: https://www.vuaproxy.cloud/sitemap.xml

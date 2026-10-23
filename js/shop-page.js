@@ -91,7 +91,7 @@
 
   function avatarOf(shop) {
     if (typeof shopAvatarUrl === "function") return shopAvatarUrl(shop);
-    const raw = shop.avatar || "/images/logo-vuammo.png";
+    const raw = shop.avatar || "/images/logo-vuaproxy.png?v=20260915logo1";
     return typeof absAssetUrl === "function" ? absAssetUrl(raw) : (raw.charAt(0) === "/" || /^https?:/i.test(raw) ? raw : "/" + raw);
   }
 
@@ -155,7 +155,7 @@
       } catch (_) {}
     }
 
-    document.title = shop.name + " | Gian hàng Vua MMO";
+    document.title = shop.name + " | Gian hàng Vua Proxy";
     const crumb = document.getElementById("shopCrumbName");
     if (crumb) crumb.textContent = shop.name;
 
@@ -191,7 +191,7 @@
       const count = allProducts.length;
       bioEl.textContent =
         shop.name +
-        " chuyên sản phẩm số trên Vua MMO" +
+        " chuyên sản phẩm số trên Vua Proxy" +
         (topCats.length ? (" — " + topCats.join(", ")) : "") +
         (count ? (". Đang có " + count + " sản phẩm") : "") +
         ". Giao tự động, bảo hành rõ ràng, hỗ trợ nhanh.";

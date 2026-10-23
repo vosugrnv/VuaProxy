@@ -25,7 +25,7 @@
 
   function wishItemHtml(it) {
     const href = productUrl(it);
-    const shop = it.seller || "Vua MMO";
+    const shop = it.seller || "Vua Proxy";
     const hasOld = it.regular && Number(it.regular) > Number(it.price);
     return (
       '<article class="wish-item" role="listitem" data-id="' +

@@ -1,21 +1,80 @@
 /* Top-up page logic */
 (function () {
   const PRESETS = [50000, 100000, 200000, 500000, 1000000];
+  const NEXT_KEY = "vuammo_topup_next";
+
+  function safeNext(raw) {
+    const n = String(raw || "").trim();
+    if (!n || !n.startsWith("/") || n.startsWith("//") || n.includes("://")) return "";
+    return n;
+  }
+
+  function rememberNextFromQuery() {
+    const params = new URLSearchParams(location.search || "");
+    const n = safeNext(params.get("next"));
+    if (n) {
+      try {
+        sessionStorage.setItem(NEXT_KEY, n);
+      } catch (_) {}
+    }
+    return n;
+  }
+
+  function getReturnNext() {
+    const fromQuery = safeNext(new URLSearchParams(location.search || "").get("next"));
+    if (fromQuery) return fromQuery;
+    try {
+      return safeNext(sessionStorage.getItem(NEXT_KEY) || "");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function clearReturnNext() {
+    try {
+      sessionStorage.removeItem(NEXT_KEY);
+    } catch (_) {}
+  }
+
+  function returnAfterPaidHtml(next) {
+    if (!next) return "";
+    return (
+      '<p style="margin-top:12px"><a class="btn btn-primary topup-cta" href="' +
+      next.replace(/"/g, "&quot;") +
+      '">Quay lại thanh toán</a></p>'
+    );
+  }
+
+  function goBackIfNeeded(paid) {
+    if (!paid) return;
+    const next = getReturnNext();
+    if (!next) return;
+    clearReturnNext();
+    setTimeout(() => {
+      location.href = next;
+    }, 900);
+  }
 
   async function init() {
     const mount = document.getElementById("topupApp");
     if (!mount || !window.VuammoAuth || !window.VuammoApi) return;
 
+    rememberNextFromQuery();
+    const returnNext = getReturnNext();
+
     const user = await VuammoAuth.refreshMe();
     if (!user) {
+      const loginNext = "/nap-tien" + (returnNext ? "?next=" + encodeURIComponent(returnNext) : "");
       mount.innerHTML =
         '<div class="topup-locked">' +
         '<div class="topup-locked-icon" aria-hidden="true">🔒</div>' +
         "<h2>Đăng nhập để nạp ví</h2>" +
-        "<p>Số dư ví dùng để thanh toán đơn hàng trên Vua MMO. Đăng nhập hoặc tạo tài khoản miễn phí để tiếp tục.</p>" +
+        "<p>Đăng nhập để nạp số dư và thanh toán đơn trên Vua Proxy.</p>" +
         '<div class="topup-locked-actions">' +
-        '<a class="btn btn-primary topup-cta" href="/tai-khoan?next=nap-tien.html">Đăng nhập / Đăng ký</a>' +
-        '<a class="btn btn-outline" href="/hinh-thuc-thanh-toan">Xem hình thức thanh toán</a>' +
+        '<a class="btn btn-primary" href="/tai-khoan?next=' +
+        encodeURIComponent(loginNext) +
+        '">Đăng nhập / Đăng ký</a>' +
+        '<a class="btn btn-outline" href="/hinh-thuc-thanh-toan">Hình thức thanh toán</a>' +
         "</div></div>";
       return;
     }
@@ -30,6 +89,9 @@
       "</p>" +
       '<p class="topup-balance-hint">Nạp ví · cộng tự động khi thanh toán thành công</p>' +
       "</div>" +
+      (returnNext
+        ? '<p class="topup-balance-hint">Sau khi nạp thành công sẽ quay lại trang thanh toán.</p>'
+        : "") +
       '<form class="topup-form" id="topupForm">' +
       '<p class="topup-section-title">Chọn số tiền nạp</p>' +
       '<div class="topup-presets" id="topupPresets"></div>' +
@@ -80,11 +142,14 @@
           result.innerHTML =
             '<div class="topup-success"><strong>Nạp thành công</strong><p>Đã cộng ' +
             VuammoApi.money(t.amount) +
-            " vào ví.</p></div>";
+            " vào ví.</p>" +
+            returnAfterPaidHtml(getReturnNext()) +
+            "</div>";
           await VuammoAuth.refreshMe();
           document.getElementById("topupBalance").textContent = VuammoApi.money(
             VuammoAuth.getUser().balance
           );
+          goBackIfNeeded(true);
         } else {
           result.innerHTML =
             '<div class="topup-pending"><strong>Đã tạo giao dịch #' +
@@ -102,6 +167,8 @@
             syncTopup(t.orderCode)
           );
           if (t.checkoutUrl) window.open(t.checkoutUrl, "_blank");
+          // Poll PayOS via sync — webhook sometimes chậm / chưa cấu hình
+          startTopupPoll(t.orderCode);
         }
         loadLedger();
       } catch (err) {
@@ -116,8 +183,49 @@
     const code = params.get("code");
     if (code && (params.get("topup") === "ok" || params.get("topup") === "mock")) {
       await syncTopup(code);
+      startTopupPoll(code);
     }
     loadLedger();
+  }
+
+  let pollTimer = null;
+  function startTopupPoll(code) {
+    if (!code) return;
+    let tries = 0;
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      tries += 1;
+      if (tries > 40) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+        return;
+      }
+      try {
+        const data = await VuammoApi.api("/wallet/topup/" + code + "/sync");
+        if (data.topup && data.topup.status === "paid") {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          await VuammoAuth.refreshMe();
+          const bal = document.getElementById("topupBalance");
+          if (bal && VuammoAuth.getUser()) {
+            bal.textContent = VuammoApi.money(VuammoAuth.getUser().balance);
+          }
+          const result = document.getElementById("topupResult");
+          if (result) {
+            result.hidden = false;
+            result.innerHTML =
+              '<div class="topup-success"><strong>Nạp thành công</strong><p>Đã cộng tiền vào ví. Số dư: ' +
+              VuammoApi.money(data.balance) +
+              "</p>" +
+              returnAfterPaidHtml(getReturnNext()) +
+              "</div>";
+          }
+          VuammoApi.showToast("Đã cộng tiền vào ví");
+          loadLedger();
+          goBackIfNeeded(true);
+        }
+      } catch (_) {}
+    }, 3000);
   }
 
   async function syncTopup(code) {
@@ -128,6 +236,7 @@
       if (bal && VuammoAuth.getUser()) {
         bal.textContent = VuammoApi.money(VuammoAuth.getUser().balance);
       }
+      const paid = data.topup?.status === "paid";
       const result = document.getElementById("topupResult");
       if (result) {
         result.hidden = false;
@@ -136,12 +245,13 @@
           (data.topup?.status || "?") +
           "</strong><p>Số dư: " +
           VuammoApi.money(data.balance) +
-          "</p></div>";
+          "</p>" +
+          (paid ? returnAfterPaidHtml(getReturnNext()) : "") +
+          "</div>";
       }
-      VuammoApi.showToast(
-        data.topup?.status === "paid" ? "Đã cộng tiền vào ví" : "Giao dịch chưa thanh toán"
-      );
+      VuammoApi.showToast(paid ? "Đã cộng tiền vào ví" : "Giao dịch chưa thanh toán");
       loadLedger();
+      if (paid) goBackIfNeeded(true);
     } catch (err) {
       VuammoApi.showToast(err.message || "Không đồng bộ được");
     }

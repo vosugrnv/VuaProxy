@@ -1,10 +1,17 @@
-/* Load published blog from API into SHARE_POSTS (mutates array in place). */
+/* Load published blog from API into SHARE_POSTS (optional).
+   Vua Proxy storefront dùng nội dung tĩnh trong chia-se-data.js — không ghi đè bằng CMS cũ (AI). */
 (function () {
   function apiBase() {
     try {
+      if (window.VuammoApi && VuammoApi.apiBase) return VuammoApi.apiBase().replace(/\/$/, "");
       if (window.VuammoApi && VuammoApi.base) return VuammoApi.base.replace(/\/$/, "");
     } catch (_) {}
     return "/api";
+  }
+
+  if (window.VUAPROXY_BLOG_STATIC) {
+    window.VuammoBlogReady = Promise.resolve([]);
+    return;
   }
 
   window.VuammoBlogReady = fetch(apiBase() + "/blog", { credentials: "same-origin" })

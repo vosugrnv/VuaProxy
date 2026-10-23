@@ -20,7 +20,7 @@
   if(!post) return;
   const seoPath = String(post.canonicalPath || shareSeoPath(post)).replace(/^\/vi\//, "/");
 
-  document.title = (post.metaTitle || post.title) + " | Chia sẻ Vua MMO";
+  document.title = (post.metaTitle || post.title) + " | Chia sẻ Vua Proxy";
   const setMeta = (attr, key, content) => {
     let el = document.querySelector(`meta[${attr}="${key}"]`);
     if(!el){
@@ -58,11 +58,11 @@
     image: [post.ogImage || post.image].filter(Boolean),
     datePublished: post.date,
     dateModified: post.date,
-    author: {"@type":"Organization", name:"Vua MMO"},
+    author: {"@type":"Organization", name:"Vua Proxy"},
     publisher: {
       "@type":"Organization",
-      name:"Vua MMO",
-      logo: {"@type":"ImageObject", url: "https://vuammo.com/images/logo-vuammo.png"}
+      name:"Vua Proxy",
+      logo: {"@type":"ImageObject", url: "https://www.vuaproxy.cloud/images/logo-vuaproxy.png?v=20260915logo1"}
     },
     mainEntityOfPage: seoPath
   };
