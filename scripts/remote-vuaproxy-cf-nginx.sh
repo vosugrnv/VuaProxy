@@ -59,20 +59,20 @@ server {
     }
 
     location @vuaproxy {
-        rewrite ^/tat-ca-khu-vuc/([^/]+)/?$ /khu-vuc-quoc-gia.html last;
-        rewrite ^/tat-ca-san-pham/[^/]+/[^/]+/?$ /tat-ca-san-pham.html last;
-        rewrite ^/tat-ca-san-pham/.+-[0-9]+/?$ /product.html last;
-        rewrite ^/tat-ca-san-pham/[^/]+/?$ /tat-ca-san-pham.html last;
-        rewrite ^/chia-se/([^/]+)/?$ /chia-se-bai.html?slug=$1 last;
-        rewrite ^/danh-sach-san-pham/?$ /vi/danh-sach-san-pham/index.html last;
-        rewrite ^/danh-sach-san-pham/trang-([0-9]+)/?$ /vi/danh-sach-san-pham/trang-$1.html last;
-        rewrite ^/danh-sach-shop/?$ /vi/danh-sach-shop/index.html last;
-        rewrite ^/danh-sach-shop/trang-([0-9]+)/?$ /vi/danh-sach-shop/trang-$1.html last;
-        rewrite ^/danh-sach-chia-se/?$ /vi/danh-sach-chia-se/index.html last;
-        rewrite ^/danh-sach-chia-se/trang-([0-9]+)/?$ /vi/danh-sach-chia-se/trang-$1.html last;
-        rewrite ^/tin-nhan/[^/]+/?$ /tin-nhan.html last;
-        rewrite ^/admin/?$ /admin.html last;
-        rewrite ^/([a-z0-9][a-z0-9-]{0,62})/?$ /shop.html?slug=$1 last;
+        rewrite "^/tat-ca-khu-vuc/([^/]+)/?$" /khu-vuc-quoc-gia.html last;
+        rewrite "^/tat-ca-san-pham/[^/]+/[^/]+/?$" /tat-ca-san-pham.html last;
+        rewrite "^/tat-ca-san-pham/.+-[0-9]+/?$" /product.html last;
+        rewrite "^/tat-ca-san-pham/[^/]+/?$" /tat-ca-san-pham.html last;
+        rewrite "^/chia-se/([^/]+)/?$" /chia-se-bai.html?slug=$1 last;
+        rewrite "^/danh-sach-san-pham/?$" /vi/danh-sach-san-pham/index.html last;
+        rewrite "^/danh-sach-san-pham/trang-([0-9]+)/?$" /vi/danh-sach-san-pham/trang-$1.html last;
+        rewrite "^/danh-sach-shop/?$" /vi/danh-sach-shop/index.html last;
+        rewrite "^/danh-sach-shop/trang-([0-9]+)/?$" /vi/danh-sach-shop/trang-$1.html last;
+        rewrite "^/danh-sach-chia-se/?$" /vi/danh-sach-chia-se/index.html last;
+        rewrite "^/danh-sach-chia-se/trang-([0-9]+)/?$" /vi/danh-sach-chia-se/trang-$1.html last;
+        rewrite "^/tin-nhan/[^/]+/?$" /tin-nhan.html last;
+        rewrite "^/admin/?$" /admin.html last;
+        rewrite "^/([a-z0-9][a-z0-9-]{0,62})/?$" /shop.html?slug=$1 last;
         return 404;
     }
 }
