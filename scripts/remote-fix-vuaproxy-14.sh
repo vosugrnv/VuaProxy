@@ -123,10 +123,6 @@ snippet = f"""
 	}}
 }}
 """
-idx = text.find(":80 {")
-if idx < 0:
-    idx = 0
-text = text[:idx] + snippet + text[idx:]
 
 def ensure_import(marker):
     global text
@@ -144,7 +140,7 @@ ensure_import(":80 {")
 ensure_import("http://187.127.207.14 {")
 ensure_import("srv1828363.hstgr.cloud {")
 
-# Put domain sites at the VERY TOP so they win over catch-alls
+# snippet first (before imports), then domain sites, then rest
 sites = f"""
 # --- vuaproxy cloudflare origin ---
 www.vuaproxy.cloud, vuaproxy.cloud {{
