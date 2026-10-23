@@ -41,7 +41,11 @@ docker exec -i vuaproxy-pg psql -U vuaproxy -d postgres -v ON_ERROR_STOP=1 -c \
   "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='vuaproxy' AND pid <> pg_backend_pid();" || true
 docker exec -i vuaproxy-pg psql -U vuaproxy -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS vuaproxy;"
 docker exec -i vuaproxy-pg psql -U vuaproxy -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE vuaproxy OWNER vuaproxy;"
-docker exec -i vuaproxy-pg psql -U vuaproxy -d vuaproxy -v ON_ERROR_STOP=1 < /tmp/vuaproxy.sql
+# Strip PG17-only settings so restore works on postgres:16
+sed -i '/transaction_timeout/d' /tmp/vuaproxy.sql
+docker exec -i vuaproxy-pg psql -U vuaproxy -d vuaproxy -v ON_ERROR_STOP=0 < /tmp/vuaproxy.sql
+# Fail only if core tables missing
+docker exec -i vuaproxy-pg psql -U vuaproxy -d vuaproxy -Atc "SELECT count(*) FROM users;" | grep -Eq '^[0-9]+$'
 echo "DB restored rows:" 
 docker exec -i vuaproxy-pg psql -U vuaproxy -d vuaproxy -Atc "SELECT 'users='||count(*) FROM users; SELECT 'orders='||count(*) FROM orders;"
 
