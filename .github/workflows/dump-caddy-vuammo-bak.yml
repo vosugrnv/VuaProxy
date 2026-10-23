@@ -1,0 +1,38 @@
+name: dump-caddy-vuammo-bak
+on: workflow_dispatch
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Dump bak snippets for vuammo-like hosts
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@187.127.207.14 'bash -s' <<'R'
+          set +e
+          echo ===CURRENT_FULL===
+          wc -l /srv/platform/infra/caddy/Caddyfile
+          cat /srv/platform/infra/caddy/Caddyfile
+          echo ===SCAN_BAKS===
+          for f in \
+            /srv/platform/infra/caddy/Caddyfile.bak.before-vuaproxy-clean.1792739445 \
+            /srv/platform/infra/caddy/Caddyfile.bak.fix.1792739124 \
+            /srv/platform/infra/caddy/Caddyfile.bak.purge-vuammo.1792643834 \
+            /srv/platform/infra/caddy/Caddyfile.bak.vuammo.1791443791 \
+            /srv/platform/infra/caddy/Caddyfile.bak.gw17.1792300544
+          do
+            echo "==== FILE $f ===="
+            [ -f "$f" ] || { echo missing; continue; }
+            grep -nEi 'vuammo|vuammovn|\.pro|host |tls |root \*|3100|3101|:80' "$f" | head -50
+          done
+          echo ===WWW_PATHS===
+          ls -la /var/www/ | head -40
+          find /var/www -maxdepth 2 -name 'index.html' 2>/dev/null | head -20
+          for p in /var/www/vuammo /var/www/vuammo-web /var/www/vuammovn /var/www/html; do
+            [ -f "$p/index.html" ] && echo "FOUND $p" && grep -oE '<title>[^<]+' "$p/index.html" | head -1
+          done
+          echo DONE
+          R

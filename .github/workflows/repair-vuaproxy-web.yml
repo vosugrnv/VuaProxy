@@ -18,9 +18,11 @@ jobs:
           SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
           SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
 
-          # Fail fast if local tree is still vuammo-branded
-          grep -q 'Vua Proxy' index.html
-          ! grep -q 'Vua MMO —' index.html
+          # Fail fast if title is wrong brand
+          TITLE_LOCAL=$(grep -oE '<title>[^<]+' index.html | head -1 || true)
+          echo "LOCAL_TITLE=$TITLE_LOCAL"
+          echo "$TITLE_LOCAL" | grep -qi 'Vua Proxy'
+          echo "$TITLE_LOCAL" | grep -qi 'Vua MMO' && { echo "BAD local title"; exit 1; } || true
 
           tar -czf /tmp/vuaproxy-site.tar.gz \
             --exclude=./.git --exclude=./.github --exclude=./.vercel \
