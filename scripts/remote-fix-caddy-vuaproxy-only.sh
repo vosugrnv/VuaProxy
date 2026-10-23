@@ -185,6 +185,57 @@ p.write_text(text)
 print("injected host handlers into :80 (static via", static_up, ")")
 PY
 
+# HTTPS for Cloudflare Full (self-signed via tls internal)
+python3 - "$HOSTIP" "$STATIC_UP" <<'PY'
+from pathlib import Path
+import re, sys
+hostip, static_up = sys.argv[1], sys.argv[2]
+p = Path("/srv/platform/infra/caddy/Caddyfile")
+text = p.read_text()
+text = re.sub(r"\nwww\.vuaproxy\.cloud,\s*vuaproxy\.cloud \{[\s\S]*?\n\}\n*", "\n", text)
+text = re.sub(r"\nadmin\.vuaproxy\.cloud \{[\s\S]*?\n\}\n*", "\n", text)
+site = f"""
+www.vuaproxy.cloud, vuaproxy.cloud {{
+	tls internal
+	encode gzip
+	handle /api/* {{
+		uri strip_prefix /api
+		header {{
+			-Content-Encoding
+		}}
+		reverse_proxy {hostip}:3101 {{
+			header_up Accept-Encoding identity
+			header_up Host {{host}}
+		}}
+	}}
+	handle {{
+		reverse_proxy {static_up}
+	}}
+}}
+
+admin.vuaproxy.cloud {{
+	tls internal
+	encode gzip
+	header X-Robots-Tag "noindex, nofollow"
+	handle /api/* {{
+		uri strip_prefix /api
+		header {{
+			-Content-Encoding
+		}}
+		reverse_proxy {hostip}:3101 {{
+			header_up Accept-Encoding identity
+			header_up Host {{host}}
+		}}
+	}}
+	handle {{
+		reverse_proxy {static_up}
+	}}
+}}
+"""
+p.write_text(text.rstrip() + "\n" + site + "\n")
+print("HTTPS tls internal site blocks written")
+PY
+
 docker exec platform-caddy caddy validate --config /etc/caddy/Caddyfile
 docker exec platform-caddy caddy reload --config /etc/caddy/Caddyfile
 sleep 2
@@ -199,4 +250,9 @@ echo "$TITLE" | grep -qiE 'Vua Proxy|Proxy|Vua MMO|vuaproxy'
 curl -sS -m 5 -o /dev/null -w 'home %{http_code}\n' -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/
 curl -sS -m 5 -o /dev/null -w 'admin %{http_code}\n' -H 'Host: admin.vuaproxy.cloud' http://127.0.0.1/admin.html
 curl -sS -m 5 -H 'Host: www.vuaproxy.cloud' -X POST http://127.0.0.1/api/payos/webhook -H 'Content-Type: application/json' -d '{}'; echo
+echo ===VERIFY_HTTPS===
+curl -skS -m 8 -o /dev/null -w 'https-home %{http_code}\n' --resolve vuaproxy.cloud:443:127.0.0.1 https://vuaproxy.cloud/ || true
+curl -skS -m 8 -w 'https-health %{http_code} ' --resolve vuaproxy.cloud:443:127.0.0.1 https://vuaproxy.cloud/api/health || true
+echo
+curl -skS -m 8 -o /dev/null -w 'https-admin %{http_code}\n' --resolve admin.vuaproxy.cloud:443:127.0.0.1 https://admin.vuaproxy.cloud/admin.html || true
 echo CADDY_CLEAN_OK

@@ -1,0 +1,118 @@
+name: fix-origin-tls-full
+on: workflow_dispatch
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: HTTPS site blocks with tls internal (CF Full)
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@187.127.207.14 'bash -s' <<'R'
+          set -euo pipefail
+          CADDY=/srv/platform/infra/caddy/Caddyfile
+          test -f "$CADDY"
+          cp -a "$CADDY" "$CADDY.bak.tls.$(date +%s)"
+
+          HOSTIP=172.16.0.1
+          for ip in 172.16.0.1 172.17.0.1 172.20.0.1; do
+            if docker exec platform-caddy wget -qO- --timeout=2 "http://$ip:3101/health" 2>/dev/null | grep -q ok; then
+              HOSTIP=$ip; break
+            fi
+          done
+          echo "HOSTIP=$HOSTIP"
+
+          # Ensure static sidecar exists
+          if ! docker exec platform-caddy wget -qO- --timeout=2 "http://vuaproxy-static:3102/" >/dev/null 2>&1; then
+            echo "static sidecar missing — recreate"
+            cat >/tmp/vuaproxy-static.Caddyfile <<'EOF'
+          :3102 {
+          	handle_path /uploads/* {
+          		root * /srv/uploads
+          		file_server
+          	}
+          	handle {
+          		root * /srv/web
+          		try_files {path} {path}.html {path}/index.html /index.html
+          		file_server
+          	}
+          }
+          EOF
+            NET=$(docker inspect platform-caddy -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' | awk '{print $1}')
+            docker rm -f vuaproxy-static >/dev/null 2>&1 || true
+            docker run -d --name vuaproxy-static --restart unless-stopped --network "$NET" \
+              -v /var/www/vuaproxy-web:/srv/web:ro \
+              -v /var/www/vuaproxy/uploads:/srv/uploads:ro \
+              -v /tmp/vuaproxy-static.Caddyfile:/etc/caddy/Caddyfile:ro \
+              caddy:2-alpine >/dev/null
+            sleep 2
+          fi
+          STATIC_UP=vuaproxy-static:3102
+
+          python3 - "$HOSTIP" "$STATIC_UP" <<'PY'
+          from pathlib import Path
+          import re, sys
+          hostip, static_up = sys.argv[1], sys.argv[2]
+          p = Path("/srv/platform/infra/caddy/Caddyfile")
+          text = p.read_text()
+
+          # Remove prior HTTPS domain blocks (keep :80 host handlers)
+          text = re.sub(r"\nwww\.vuaproxy\.cloud,\s*vuaproxy\.cloud \{[\s\S]*?\n\}\n*", "\n", text)
+          text = re.sub(r"\nadmin\.vuaproxy\.cloud \{[\s\S]*?\n\}\n*", "\n", text)
+
+          site = f"""
+          www.vuaproxy.cloud, vuaproxy.cloud {{
+          	tls internal
+          	encode gzip
+          	handle /api/* {{
+          		uri strip_prefix /api
+          		header {{
+          			-Content-Encoding
+          		}}
+          		reverse_proxy {hostip}:3101 {{
+          			header_up Accept-Encoding identity
+          			header_up Host {{host}}
+          		}}
+          	}}
+          	handle {{
+          		reverse_proxy {static_up}
+          	}}
+          }}
+
+          admin.vuaproxy.cloud {{
+          	tls internal
+          	encode gzip
+          	header X-Robots-Tag "noindex, nofollow"
+          	handle /api/* {{
+          		uri strip_prefix /api
+          		header {{
+          			-Content-Encoding
+          		}}
+          		reverse_proxy {hostip}:3101 {{
+          			header_up Accept-Encoding identity
+          			header_up Host {{host}}
+          		}}
+          	}}
+          	handle {{
+          		reverse_proxy {static_up}
+          	}}
+          }}
+          """
+          p.write_text(text.rstrip() + "\n" + site + "\n")
+          print("HTTPS tls internal blocks appended")
+          PY
+
+          docker exec platform-caddy caddy validate --config /etc/caddy/Caddyfile
+          docker exec platform-caddy caddy reload --config /etc/caddy/Caddyfile || docker restart platform-caddy
+          sleep 4
+
+          echo ===LOCAL_HTTPS===
+          curl -skS -m 10 -o /dev/null -w 'root %{http_code}\n' --resolve vuaproxy.cloud:443:127.0.0.1 https://vuaproxy.cloud/
+          curl -skS -m 10 -w 'health %{http_code} ' --resolve vuaproxy.cloud:443:127.0.0.1 https://vuaproxy.cloud/api/health; echo
+          curl -skS -m 10 -o /dev/null -w 'www %{http_code}\n' --resolve www.vuaproxy.cloud:443:127.0.0.1 https://www.vuaproxy.cloud/
+          curl -skS -m 10 -o /dev/null -w 'admin %{http_code}\n' --resolve admin.vuaproxy.cloud:443:127.0.0.1 https://admin.vuaproxy.cloud/admin.html
+          echo TLS_FULL_OK
+          R
