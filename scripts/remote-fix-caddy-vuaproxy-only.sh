@@ -17,31 +17,35 @@ test -f "$WEB/index.html"
 mkdir -p /var/www/vuaproxy/uploads
 chmod -R a+rX "$WEB" /var/www/vuaproxy/uploads || true
 
-# Static sidecar Caddy on host :3102 (try_files + uploads)
+# Static sidecar on same Docker network as platform-caddy (container has no /var/www)
 cat >/tmp/vuaproxy-static.Caddyfile <<'EOF'
 :3102 {
-	handle /uploads/* {
-		root * /var/www/vuaproxy
+	handle_path /uploads/* {
+		root * /srv/uploads
 		file_server
 	}
 	handle {
-		root * /var/www/vuaproxy-web
+		root * /srv/web
 		try_files {path} {path}.html {path}/index.html /index.html
 		file_server
 	}
 }
 EOF
 
+NET=$(docker inspect platform-caddy -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' | awk '{print $1}')
+echo "CADDY_NET=$NET"
 docker rm -f vuaproxy-static >/dev/null 2>&1 || true
-docker run -d --name vuaproxy-static --restart unless-stopped --network host \
-  -v /var/www/vuaproxy-web:/var/www/vuaproxy-web:ro \
-  -v /var/www/vuaproxy/uploads:/var/www/vuaproxy/uploads:ro \
+docker run -d --name vuaproxy-static --restart unless-stopped --network "$NET" \
+  -v /var/www/vuaproxy-web:/srv/web:ro \
+  -v /var/www/vuaproxy/uploads:/srv/uploads:ro \
   -v /tmp/vuaproxy-static.Caddyfile:/etc/caddy/Caddyfile:ro \
   caddy:2-alpine >/dev/null
-sleep 1
-curl -sS -o /dev/null -w 'static_direct %{http_code}\n' http://127.0.0.1:3102/
-TITLE0=$(curl -sS -m 3 http://127.0.0.1:3102/ | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1 || true)
+sleep 2
+STATIC_UP=vuaproxy-static:3102
+docker exec platform-caddy wget -qO- --timeout=3 "http://$STATIC_UP/" | head -c 120; echo
+TITLE0=$(docker exec platform-caddy wget -qO- --timeout=3 "http://$STATIC_UP/" | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1 || true)
 echo "static_title=$TITLE0"
+test -n "$TITLE0"
 
 pm2 delete vuaproxy-web >/dev/null 2>&1 || true
 pm2 restart vuaproxy-api --update-env || true
@@ -60,10 +64,12 @@ if grep -q 'vuaproxy cloudflare origin' "$CADDY" || grep -c 'vuaproxy_api' "$CAD
   fi
 fi
 
-python3 - "$HOSTIP" <<'PY'
+STATIC_UP=vuaproxy-static:3102
+python3 - "$HOSTIP" "$STATIC_UP" <<'PY'
 from pathlib import Path
 import re, sys
 hostip = sys.argv[1]
+static_up = sys.argv[2]
 p = Path("/srv/platform/infra/caddy/Caddyfile")
 text = p.read_text()
 
@@ -91,7 +97,7 @@ snippet = f"""
 	handle_path /vuaproxy-uploads* {{
 		uri strip_prefix /vuaproxy-uploads
 		rewrite * /uploads{{uri}}
-		reverse_proxy {hostip}:3102
+		reverse_proxy {static_up}
 	}}
 }}
 """
@@ -143,7 +149,7 @@ handlers = f"""
 			}}
 		}}
 		handle {{
-			reverse_proxy {hostip}:3102
+			reverse_proxy {static_up}
 		}}
 	}}
 	@vuaproxy_admin host admin.vuaproxy.cloud
@@ -160,7 +166,7 @@ handlers = f"""
 			}}
 		}}
 		handle {{
-			reverse_proxy {hostip}:3102
+			reverse_proxy {static_up}
 		}}
 	}}
 	# --- end vuaproxy host handlers ---
@@ -176,7 +182,7 @@ if nl > 0:
     insert_at = nl + 1
 text = text[:insert_at] + handlers + text[insert_at:]
 p.write_text(text)
-print("injected host handlers into :80 (static via host :3102)")
+print("injected host handlers into :80 (static via", static_up, ")")
 PY
 
 docker exec platform-caddy caddy validate --config /etc/caddy/Caddyfile
