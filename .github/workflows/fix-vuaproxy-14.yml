@@ -1,0 +1,23 @@
+name: fix-vuaproxy-14
+on:
+  workflow_dispatch:
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Fix DB (plain dump) + Caddy domain site
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.127.207.14"
+          SRC: "187.52.116.85"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          $SCP scripts/remote-fix-vuaproxy-14.sh "root@$DEST:/tmp/remote-fix-vuaproxy-14.sh"
+          $SSH "root@$DEST" "sed -i 's/\\r\$//' /tmp/remote-fix-vuaproxy-14.sh && SRC=$SRC VPS_PASS=$(printf %q "$VPS_PASS") bash /tmp/remote-fix-vuaproxy-14.sh"
