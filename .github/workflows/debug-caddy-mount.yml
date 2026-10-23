@@ -1,0 +1,39 @@
+name: debug-caddy-mount
+on: workflow_dispatch
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Inspect Caddy mounts + vuammo vs vuaproxy
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@187.127.207.14 'bash -s' <<'R'
+          set +e
+          echo ===DOCKER_MOUNTS===
+          docker inspect platform-caddy --format '{{json .Mounts}}' | python3 -m json.tool
+          echo ===LS_IN_CONTAINER===
+          docker exec platform-caddy ls -la /var/www 2>&1 | head -40
+          docker exec platform-caddy ls -la /var/www/vuaproxy-web/index.html 2>&1
+          docker exec platform-caddy ls -la /var/www/vuammo-web/index.html 2>&1
+          docker exec platform-caddy ls -la /var/www/vuammo/index.html 2>&1
+          echo ===HOST_LS===
+          ls -la /var/www/ | head -40
+          ls -la /var/www/vuaproxy-web/index.html 2>&1
+          ls -la /var/www/vuammo* 2>&1 | head -20
+          echo ===CURL_VUAPROXY===
+          curl -sS -m 5 -D- -o /tmp/h.html -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/ | head -30
+          echo BODY_BYTES=$(wc -c </tmp/h.html)
+          head -c 300 /tmp/h.html; echo
+          echo ===CURL_VUAMMO===
+          curl -sS -m 5 -D- -o /tmp/m.html -H 'Host: www.vuammovn.pro' http://127.0.0.1/ | head -30
+          echo BODY_BYTES=$(wc -c </tmp/m.html)
+          head -c 300 /tmp/m.html; echo
+          echo ===CADDY_VUAMMO_BLOCK===
+          grep -nE 'vuammo|vuammovn|vuaproxy|@vuaproxy|:80' /srv/platform/infra/caddy/Caddyfile | head -60
+          echo ===CADDY_80_SNIP===
+          awk '/:80 \{/,/^\}/' /srv/platform/infra/caddy/Caddyfile | head -120
+          R
