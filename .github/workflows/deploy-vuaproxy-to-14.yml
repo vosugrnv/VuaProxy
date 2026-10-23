@@ -1,0 +1,36 @@
+name: deploy-vuaproxy-to-14
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Pack site + API patch
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pack/api-patch/src
+          tar -czf /tmp/pack/site.tar.gz \
+            --exclude=./.git --exclude=./.github --exclude=./.vercel \
+            --exclude=./api/node_modules --exclude=./node_modules --exclude=./scripts \
+            --exclude='./api/.env*' --exclude='*.bak' --exclude='*.bak_*' .
+          cp api/src/config.js api/src/wallet.js api/src/order-qr.js api/src/mail.js /tmp/pack/api-patch/src/
+          tar -czf /tmp/pack/api-patch.tar.gz -C /tmp/pack/api-patch .
+          ls -lh /tmp/pack
+      - name: Upload + migrate 85→14 + Caddy CF
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.127.207.14"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          $SCP /tmp/pack/site.tar.gz "root@$DEST:/tmp/vuaproxy-site.tar.gz"
+          $SCP /tmp/pack/api-patch.tar.gz "root@$DEST:/tmp/vuaproxy-api-patch.tar.gz"
+          $SCP scripts/remote-vuaproxy-caddy-cf.sh "root@$DEST:/tmp/remote-vuaproxy-caddy-cf.sh"
+          $SCP scripts/remote-migrate-85-to-14.sh "root@$DEST:/tmp/remote-migrate-85-to-14.sh"
+          $SSH "root@$DEST" "sed -i 's/\\r\$//' /tmp/remote-migrate-85-to-14.sh /tmp/remote-vuaproxy-caddy-cf.sh && SRC=187.52.116.85 VPS_PASS=$(printf %q "$VPS_PASS") bash /tmp/remote-migrate-85-to-14.sh"
