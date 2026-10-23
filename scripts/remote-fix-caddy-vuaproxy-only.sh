@@ -56,13 +56,8 @@ curl -sS http://127.0.0.1:3101/health; echo
 CADDY=/srv/platform/infra/caddy/Caddyfile
 cp -a "$CADDY" "$CADDY.bak.vuaproxy.host.$(date +%s)"
 
-if grep -q 'vuaproxy cloudflare origin' "$CADDY" || grep -c 'vuaproxy_api' "$CADDY" | grep -vq '^0$'; then
-  BAK=$(ls -1 /srv/platform/infra/caddy/Caddyfile.bak.* 2>/dev/null | head -1 || true)
-  if [ -n "$BAK" ]; then
-    echo "restore $BAK"
-    cp -a "$BAK" "$CADDY"
-  fi
-fi
+# Never restore an old Caddyfile backup here — that can wipe vuammo / other co-tenant
+# site blocks. Only strip + re-inject vuaproxy snippets below.
 
 STATIC_UP=vuaproxy-static:3102
 python3 - "$HOSTIP" "$STATIC_UP" <<'PY'

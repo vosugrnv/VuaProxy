@@ -1,0 +1,65 @@
+name: repair-vuaproxy-web
+on: workflow_dispatch
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Deploy correct vuaproxy-web + keep vuammo Caddy intact
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.127.207.14"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+
+          # Fail fast if local tree is still vuammo-branded
+          grep -q 'Vua Proxy' index.html
+          ! grep -q 'Vua MMO —' index.html
+
+          tar -czf /tmp/vuaproxy-site.tar.gz \
+            --exclude=./.git --exclude=./.github --exclude=./.vercel \
+            --exclude=./api/node_modules --exclude=./node_modules --exclude=./scripts \
+            --exclude='./api/.env*' --exclude='*.bak' --exclude='*.bak_*' .
+
+          $SCP /tmp/vuaproxy-site.tar.gz "root@$DEST:/tmp/vuaproxy-site.tar.gz"
+          $SCP scripts/remote-fix-caddy-vuaproxy-only.sh "root@$DEST:/tmp/remote-fix-caddy-vuaproxy-only.sh"
+
+          $SSH "root@$DEST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          WEB=/var/www/vuaproxy-web
+          mkdir -p "$WEB" /var/www/vuaproxy/uploads
+          # Snapshot before wipe (debug)
+          grep -oE '<title>[^<]+' "$WEB/index.html" 2>/dev/null | head -1 || true
+          rm -rf "$WEB"/*
+          tar -xzf /tmp/vuaproxy-site.tar.gz -C "$WEB"
+          test -f "$WEB/index.html"
+          TITLE=$(grep -oE '<title>[^<]+' "$WEB/index.html" | head -1)
+          echo "DEPLOYED_TITLE=$TITLE"
+          echo "$TITLE" | grep -qi 'Vua Proxy'
+          echo "$TITLE" | grep -qi 'Vua MMO' && { echo "BAD: still Vua MMO"; exit 1; } || true
+          chmod -R a+rX "$WEB" || true
+
+          # Recreate sidecar only (do NOT restore old Caddy backups — that can wipe vuammo)
+          sed -i 's/\r$//' /tmp/remote-fix-caddy-vuaproxy-only.sh
+          bash /tmp/remote-fix-caddy-vuaproxy-only.sh
+
+          echo ===VERIFY_VUAPROXY===
+          curl -sS -m 5 -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/ | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1
+          curl -skS -m 8 --resolve www.vuaproxy.cloud:443:127.0.0.1 https://www.vuaproxy.cloud/ | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1
+          curl -sS -m 5 -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/api/health; echo
+          docker exec platform-caddy wget -qO- --timeout=3 http://vuaproxy-static:3102/ | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1
+
+          echo ===VERIFY_VUAMMO_STILL===
+          grep -nE 'vuammovn|vuammo' /srv/platform/infra/caddy/Caddyfile | head -30 || echo 'NO_VUAMMO_IN_CADDY'
+          for H in www.vuammovn.pro vuammovn.pro; do
+            echo "-- $H"
+            curl -sS -m 5 -H "Host: $H" http://127.0.0.1/ | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1 || true
+            curl -skS -m 8 --resolve "$H:443:127.0.0.1" "https://$H/" 2>/dev/null | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1 || true
+          done
+          REMOTE

@@ -1,0 +1,33 @@
+name: find-vuammo-caddy-bak
+on: workflow_dispatch
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: List Caddy backups containing vuammovn
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@187.127.207.14 'bash -s' <<'R'
+          set +e
+          echo ===CURRENT_VUAMMO===
+          grep -nE 'vuammovn|vuammo' /srv/platform/infra/caddy/Caddyfile | head -40 || echo NONE
+          echo ===BAKS===
+          ls -lt /srv/platform/infra/caddy/Caddyfile.bak* 2>/dev/null | head -25
+          echo ===BAK_HITS===
+          for f in /srv/platform/infra/caddy/Caddyfile.bak*; do
+            [ -f "$f" ] || continue
+            if grep -q 'vuammovn' "$f" 2>/dev/null; then
+              echo "HIT $f"
+              grep -nE 'vuammovn|www\.vuammo' "$f" | head -15
+              echo ----
+            fi
+          done | head -80
+          echo ===LIVE_VUAMMO_HTTPS===
+          curl -sS -m 8 -D- -o /tmp/m.html https://www.vuammovn.pro/ | head -15
+          tr '\n' ' ' </tmp/m.html | grep -oE '<title>[^<]+' | head -1
+          echo DONE
+          R
