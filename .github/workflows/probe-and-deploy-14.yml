@@ -1,0 +1,40 @@
+name: probe-and-deploy-14
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Probe both VPS + Caddy vuammo site
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          set +e
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          echo "===== 187.127.207.14 ====="
+          $SSH root@187.127.207.14 'bash -s' <<'R'
+          hostname
+          ls /var/www | tr "\n" " "; echo
+          pm2 jlist 2>/dev/null | python3 -c "import sys,json;d=json.load(sys.stdin);print([(x['name'],x['pm2_env']['status']) for x in d])"
+          echo "--- caddy sites ---"
+          grep -nE "vuammo|vuaproxy|vuammovn|handle_path|root \*|reverse_proxy|:310" /srv/platform/infra/caddy/Caddyfile 2>/dev/null | head -80
+          echo "--- env ---"
+          grep -E '^(PORT|WEB_ORIGIN|HOST)=' /var/www/vuaproxy-api/.env 2>/dev/null || echo no-vuaproxy-env
+          grep -E '^(PORT|WEB_ORIGIN|HOST)=' /var/www/vuammo-api/.env 2>/dev/null | head -5
+          echo "--- health ---"
+          curl -sS -m 3 http://127.0.0.1:3101/health || echo no3101
+          echo
+          curl -sS -m 3 http://127.0.0.1:3100/health || echo no3100
+          echo
+          curl -sS -m 3 -H 'Host: www.vuammovn.pro' http://127.0.0.1/api/health || true
+          echo
+          ls /var/www/vuammo-web 2>/dev/null | head -5 || echo no-vuammo-web
+          ls /var/www/vuaproxy-web 2>/dev/null | head -5 || echo no-vuaproxy-web
+          ls /var/www/vuaproxy-api 2>/dev/null | head -5 || echo no-api-dir
+          R
+          echo "===== 187.52.116.85 ====="
+          $SSH root@187.52.116.85 'hostname; pm2 jlist 2>/dev/null | python3 -c "import sys,json;d=json.load(sys.stdin);print([(x[\"name\"],x[\"pm2_env\"][\"status\"]) for x in d if \"proxy\" in x[\"name\"] or \"vuammo\" in x[\"name\"] or \"vuaproxy\" in x[\"name\"]])"; curl -sS -m 3 -H "Host: www.vuaproxy.cloud" http://127.0.0.1/api/health; echo; ls /var/www/vuaproxy-web/index.html 2>/dev/null'
