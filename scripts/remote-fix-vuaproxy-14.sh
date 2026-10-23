@@ -109,7 +109,9 @@ text = re.sub(r"\n?\(vuaproxy_api\) \{[\s\S]*?\n\}\n*", "\n", text)
 snippet = f"""
 (vuaproxy_api) {{
 	handle_path /vuaproxy-api* {{
-		header {{ -Content-Encoding }}
+		header {{
+			-Content-Encoding
+		}}
 		reverse_proxy {hostip}:3101 {{
 			header_up Accept-Encoding identity
 			header_up Host {{host}}
@@ -149,7 +151,9 @@ www.vuaproxy.cloud, vuaproxy.cloud {{
 	encode gzip
 	handle /api/* {{
 		uri strip_prefix /api
-		header {{ -Content-Encoding }}
+		header {{
+			-Content-Encoding
+		}}
 		reverse_proxy {hostip}:3101 {{
 			header_up Accept-Encoding identity
 			header_up Host {{host}}
@@ -189,7 +193,9 @@ admin.vuaproxy.cloud {{
 	header X-Robots-Tag "noindex, nofollow"
 	handle /api/* {{
 		uri strip_prefix /api
-		header {{ -Content-Encoding }}
+		header {{
+			-Content-Encoding
+		}}
 		reverse_proxy {hostip}:3101 {{
 			header_up Accept-Encoding identity
 			header_up Host {{host}}
