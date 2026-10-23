@@ -1,0 +1,51 @@
+name: inspect-vuaproxy-leak
+on: workflow_dispatch
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Dump Caddy vuammo vs vuaproxy + curl both
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@187.127.207.14 'bash -s' <<'R'
+          set +e
+          echo ===DOCKER===
+          docker ps --format '{{.Names}} {{.Status}}' | grep -E 'caddy|vuaproxy|vuammo' || true
+          echo ===PM2===
+          pm2 jlist 2>/dev/null | python3 -c 'import sys,json;d=json.load(sys.stdin);print([(x["name"],x["pm2_env"]["status"],x["pm2_env"].get("PORT") or x["pm2_env"].get("env",{}).get("PORT")) for x in d if "vua" in x["name"].lower()])' || true
+          echo ===CADDY_GREP===
+          grep -nE 'vuammo|vuammovn|vuaproxy|tls internal|@vuaproxy|:80 |:443|file_server|vuaproxy-static|3100|3101|3102' /srv/platform/infra/caddy/Caddyfile | head -120
+          echo ===SITE_BLOCKS===
+          awk '
+            /vuaproxy\.cloud|vuammovn\.pro|@vuaproxy|vuammo/ {show=1}
+            show {print NR": "$0}
+            show && /^}/ {show=0; print "----"}
+          ' /srv/platform/infra/caddy/Caddyfile | head -200
+          echo ===CURL_HTTP80===
+          for H in www.vuaproxy.cloud vuaproxy.cloud admin.vuaproxy.cloud www.vuammovn.pro; do
+            echo "-- Host $H"
+            curl -sS -m 5 -D- -o /tmp/b.html -H "Host: $H" http://127.0.0.1/ | head -20
+            tr '\n' ' ' </tmp/b.html | grep -oE '<title>[^<]+' | head -1
+            grep -oE 'vuammo|Vua MMO|Vua Proxy|vuaproxy' /tmp/b.html | sort | uniq -c | head
+            echo
+          done
+          echo ===CURL_HTTPS===
+          for H in www.vuaproxy.cloud vuaproxy.cloud admin.vuaproxy.cloud; do
+            echo "-- https $H"
+            curl -skS -m 8 -D- -o /tmp/h.html --resolve "$H:443:127.0.0.1" "https://$H/" | head -15
+            tr '\n' ' ' </tmp/h.html | grep -oE '<title>[^<]+' | head -1
+            grep -oE 'vuammo|Vua MMO|Vua Proxy|vuaproxy' /tmp/h.html | sort | uniq -c | head
+            echo
+          done
+          echo ===STATIC_SIDECAR===
+          docker exec platform-caddy wget -qO- --timeout=3 http://vuaproxy-static:3102/ 2>&1 | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1
+          docker exec platform-caddy wget -qO- --timeout=3 http://172.16.0.1:3101/health 2>&1; echo
+          ls -la /var/www/vuaproxy-web/index.html /var/www/vuammo-web/index.html 2>&1
+          head -c 200 /var/www/vuaproxy-web/index.html; echo
+          head -c 200 /var/www/vuammo-web/index.html; echo
+          echo DONE
+          R
