@@ -179,7 +179,13 @@ function attach(ordersCore) {
 
       items = await withTransaction(async (client) => enrichItemsSeller(client, items));
       const publicCode = await withTransaction(async (client) => allocPublicCode(client));
-      const origin = String(config.webOrigin || "").replace(/\/$/, "");
+      const origin = (
+        config.webOriginPrimary ||
+        String(config.webOrigin || "").split(",")[0] ||
+        ""
+      )
+        .trim()
+        .replace(/\/$/, "");
       const returnUrl =
         origin +
         "/thanh-toan?pay=ok&code=" +

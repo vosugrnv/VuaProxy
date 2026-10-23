@@ -1,0 +1,72 @@
+name: deploy-vuaproxy-cf
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Pack static site + API patches
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pack
+          tar -czf /tmp/pack/site.tar.gz \
+            --exclude=./.git \
+            --exclude=./.github \
+            --exclude=./.vercel \
+            --exclude=./api/node_modules \
+            --exclude=./node_modules \
+            --exclude=./scripts \
+            --exclude='./api/.env*' \
+            --exclude='*.bak' \
+            --exclude='*.bak_*' \
+            --exclude=./agent-transcripts \
+            .
+          mkdir -p /tmp/pack/api-patch/src
+          cp api/src/config.js api/src/wallet.js api/src/order-qr.js api/src/mail.js /tmp/pack/api-patch/src/
+          tar -czf /tmp/pack/api-patch.tar.gz -C /tmp/pack/api-patch .
+          ls -lh /tmp/pack
+
+      - name: Upload and enable nginx + Cloudflare-ready vhost
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.52.116.85"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          $SCP /tmp/pack/site.tar.gz "root@$DEST:/tmp/vuaproxy-site.tar.gz"
+          $SCP /tmp/pack/api-patch.tar.gz "root@$DEST:/tmp/vuaproxy-api-patch.tar.gz"
+          $SCP scripts/remote-vuaproxy-cf-nginx.sh "root@$DEST:/tmp/remote-vuaproxy-cf-nginx.sh"
+          $SSH "root@$DEST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          WEB=/var/www/vuaproxy-web
+          mkdir -p "$WEB"
+          # Preserve uploads outside web root; replace site files
+          find "$WEB" -mindepth 1 -maxdepth 1 ! -name uploads -exec rm -rf {} +
+          tar -xzf /tmp/vuaproxy-site.tar.gz -C "$WEB"
+          # Remove nested api tree from web root (API lives in vuaproxy-api)
+          rm -rf "$WEB/api" "$WEB/.git" "$WEB/node_modules" "$WEB/.vercel"
+          chown -R www-data:www-data "$WEB" || true
+          rm -rf /tmp/vuaproxy-api-patch
+          mkdir -p /tmp/vuaproxy-api-patch
+          tar -xzf /tmp/vuaproxy-api-patch.tar.gz -C /tmp/vuaproxy-api-patch
+          sed -i 's/\r$//' /tmp/remote-vuaproxy-cf-nginx.sh
+          bash /tmp/remote-vuaproxy-cf-nginx.sh
+          REMOTE
+
+      - name: Public probe via IP Host header
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.52.116.85"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 "root@$DEST" \
+            "curl -sS -m 8 -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/api/health; echo; curl -sS -m 8 -o /dev/null -w 'ext-ip %{http_code}\n' -H 'Host: www.vuaproxy.cloud' http://187.52.116.85/"
