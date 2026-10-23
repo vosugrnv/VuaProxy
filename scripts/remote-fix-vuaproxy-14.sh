@@ -214,8 +214,8 @@ admin.vuaproxy.cloud {{
 }}
 
 """
-p.write_text(sites + text)
-print("wrote domain sites at top")
+p.write_text(snippet + "\n" + sites + text)
+print("wrote snippet + domain sites at top")
 PY
 
 docker exec platform-caddy caddy validate --config /etc/caddy/Caddyfile
