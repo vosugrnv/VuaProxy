@@ -1,0 +1,14 @@
+name: caddy-head
+on: workflow_dispatch
+jobs:
+  h:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Show Caddyfile head
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 root@187.127.207.14 'head -n 80 /srv/platform/infra/caddy/Caddyfile; echo =====; ls -lt /srv/platform/infra/caddy/Caddyfile.bak* | head -5'
