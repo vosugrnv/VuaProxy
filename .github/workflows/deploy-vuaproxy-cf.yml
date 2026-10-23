@@ -49,7 +49,7 @@ jobs:
           WEB=/var/www/vuaproxy-web
           mkdir -p "$WEB"
           # Preserve uploads outside web root; replace site files
-          find "$WEB" -mindepth 1 -maxdepth 1 ! -name uploads -exec rm -rf {} +
+          find "$WEB" -mindepth 1 -maxdepth 1 ! -name uploads -exec rm -rf {} + || true
           tar -xzf /tmp/vuaproxy-site.tar.gz -C "$WEB"
           # Remove nested api tree from web root (API lives in vuaproxy-api)
           rm -rf "$WEB/api" "$WEB/.git" "$WEB/node_modules" "$WEB/.vercel"

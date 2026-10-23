@@ -36,11 +36,6 @@ server {
     index index.html;
     client_max_body_size 50m;
 
-    # apex → www (avoid POST /api broken by redirect)
-    if ($host = vuaproxy.cloud) {
-        return 301 https://www.vuaproxy.cloud$request_uri;
-    }
-
     location /api/ {
         proxy_pass http://127.0.0.1:3101/;
         proxy_http_version 1.1;
@@ -119,13 +114,30 @@ server {
 NGX
 
 ln -sfn /etc/nginx/sites-available/vuaproxy-web /etc/nginx/sites-enabled/vuaproxy-web
+# Avoid conflicting server_name on :80 from earlier path-only config
+rm -f /etc/nginx/conf.d/vuaproxy-path.conf
 
-# Keep IP path proxy for emergency, but prefer domain vhost
-if [ -f /etc/nginx/conf.d/vuaproxy-path.conf ]; then
-  # leave it; domain vhost takes precedence by server_name
-  true
-fi
+# Keep IP path locations for direct http://IP/vuaproxy-api health checks
+mkdir -p /etc/nginx/snippets
+cat > /etc/nginx/snippets/vuaproxy-api-location.conf <<'SNIP'
+location /vuaproxy-api/ {
+  proxy_pass http://127.0.0.1:3101/;
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  client_max_body_size 20m;
+}
+location /vuaproxy-uploads/ {
+  alias /var/www/vuaproxy/uploads/;
+  access_log off;
+  expires 7d;
+}
+SNIP
 
+echo "=== vuaproxy-web head ==="
+sed -n '45,70p' /etc/nginx/sites-available/vuaproxy-web | cat -A
 nginx -t
 systemctl reload nginx
 
