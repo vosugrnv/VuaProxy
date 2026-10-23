@@ -1,0 +1,50 @@
+name: deploy-web-caddy-14
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Pack + deploy web + fix Caddy
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+          DEST: "187.127.207.14"
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+
+          tar -czf /tmp/vuaproxy-site.tar.gz \
+            --exclude=./.git --exclude=./.github --exclude=./.vercel \
+            --exclude=./api/node_modules --exclude=./node_modules --exclude=./scripts \
+            --exclude='./api/.env*' --exclude='*.bak' --exclude='*.bak_*' .
+
+          $SCP /tmp/vuaproxy-site.tar.gz "root@$DEST:/tmp/vuaproxy-site.tar.gz"
+          $SCP scripts/remote-fix-caddy-vuaproxy-only.sh "root@$DEST:/tmp/remote-fix-caddy-vuaproxy-only.sh"
+
+          $SSH "root@$DEST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          WEB=/var/www/vuaproxy-web
+          mkdir -p "$WEB" /var/www/vuaproxy/uploads
+          rm -rf "$WEB"/*
+          tar -xzf /tmp/vuaproxy-site.tar.gz -C "$WEB"
+          test -f "$WEB/index.html"
+          ls -lh "$WEB/index.html"
+          grep -oE '<title>[^<]+' "$WEB/index.html" | head -1
+          # ensure caddy can read
+          chmod -R a+rX "$WEB" || true
+          sed -i 's/\r$//' /tmp/remote-fix-caddy-vuaproxy-only.sh
+          bash /tmp/remote-fix-caddy-vuaproxy-only.sh
+          echo ===DEBUG_HOME===
+          curl -sS -m 5 -D- -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/ -o /tmp/vp-home.html || true
+          head -c 400 /tmp/vp-home.html; echo
+          wc -c /tmp/vp-home.html
+          ls -la /var/www/vuaproxy-web/index.html
+          echo ===CADDY_MATCH===
+          grep -nE 'vuaproxy|@vuaproxy|:80' /srv/platform/infra/caddy/Caddyfile | head -40
+          REMOTE
