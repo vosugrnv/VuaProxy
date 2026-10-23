@@ -20,4 +20,5 @@ jobs:
           SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
           SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
           $SCP scripts/remote-fix-vuaproxy-14.sh "root@$DEST:/tmp/remote-fix-vuaproxy-14.sh"
-          $SSH "root@$DEST" "sed -i 's/\\r\$//' /tmp/remote-fix-vuaproxy-14.sh && SRC=$SRC VPS_PASS=$(printf %q "$VPS_PASS") bash /tmp/remote-fix-vuaproxy-14.sh"
+          $SCP scripts/remote-fix-caddy-vuaproxy-only.sh "root@$DEST:/tmp/remote-fix-caddy-vuaproxy-only.sh"
+          $SSH "root@$DEST" "sed -i 's/\\r\$//' /tmp/remote-fix-vuaproxy-14.sh /tmp/remote-fix-caddy-vuaproxy-only.sh && SRC=$SRC VPS_PASS=$(printf %q "$VPS_PASS") bash /tmp/remote-fix-vuaproxy-14.sh && bash /tmp/remote-fix-caddy-vuaproxy-only.sh"

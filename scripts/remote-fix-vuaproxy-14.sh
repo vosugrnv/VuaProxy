@@ -83,19 +83,11 @@ pm2 save || true
 sleep 1
 curl -sS http://127.0.0.1:3101/health; echo
 
-# Pick host IP reachable from caddy
-HOSTIP=172.16.0.1
-for ip in 172.16.0.1 172.17.0.1 172.20.0.1; do
-  if docker exec platform-caddy wget -qO- --timeout=2 "http://$ip:3101/health" 2>/dev/null | grep -q ok; then
-    HOSTIP=$ip; break
-  fi
-done
-echo "HOSTIP=$HOSTIP"
+echo DB_API_OK
+exit 0
 
-CADDY=/srv/platform/infra/caddy/Caddyfile
-cp -a "$CADDY" "$CADDY.bak.fix.$(date +%s)"
-
-python3 - "$HOSTIP" <<'PY'
+# --- legacy caddy patch (moved to remote-fix-caddy-vuaproxy-only.sh) ---
+python3 - <<'PY'
 from pathlib import Path
 import re, sys
 hostip = sys.argv[1]
