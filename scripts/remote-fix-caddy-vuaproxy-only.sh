@@ -42,10 +42,14 @@ docker run -d --name vuaproxy-static --restart unless-stopped --network "$NET" \
   caddy:2-alpine >/dev/null
 sleep 2
 STATIC_UP=vuaproxy-static:3102
-docker exec platform-caddy wget -qO- --timeout=3 "http://$STATIC_UP/" | head -c 120; echo
-TITLE0=$(docker exec platform-caddy wget -qO- --timeout=3 "http://$STATIC_UP/" | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1 || true)
+# Avoid SIGPIPE (141) under `set -e` when piping to head
+docker exec platform-caddy wget -qO- --timeout=3 "http://$STATIC_UP/" 2>/dev/null | head -c 120 || true
+echo
+TITLE0=$(docker exec platform-caddy wget -qO- --timeout=3 "http://$STATIC_UP/" 2>/dev/null | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1 || true)
 echo "static_title=$TITLE0"
 test -n "$TITLE0"
+echo "$TITLE0" | grep -qi 'Vua Proxy'
+echo "$TITLE0" | grep -qi 'Vua MMO' && { echo "BAD static sidecar still Vua MMO"; exit 1; } || true
 
 pm2 delete vuaproxy-web >/dev/null 2>&1 || true
 pm2 restart vuaproxy-api --update-env || true
