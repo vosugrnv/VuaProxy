@@ -1,0 +1,62 @@
+name: heal-vuaproxy-db
+on: workflow_dispatch
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Bind Postgres to localhost and restart API
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@187.127.207.14 'bash -s' <<'R'
+          set -euo pipefail
+          echo ===BEFORE===
+          python3 - <<'PY'
+          import re
+          t=open("/var/www/vuaproxy-api/.env").read()
+          m=re.search(r"DATABASE_URL=postgres://[^@]+@([^:/]+)", t)
+          print("db_host", m.group(1) if m else "missing")
+          PY
+          docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' vuaproxy-pg
+          docker port vuaproxy-pg || true
+
+          if ! docker port vuaproxy-pg 2>/dev/null | grep -q '5432'; then
+            echo "republish postgres on 127.0.0.1:5432"
+            docker inspect vuaproxy-pg --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E '^(POSTGRES_|LANG|PGDATA)=' > /tmp/pg.env || true
+            docker stop vuaproxy-pg
+            docker rename vuaproxy-pg vuaproxy-pg-old
+            docker run -d --name vuaproxy-pg --restart unless-stopped \
+              -p 127.0.0.1:5432:5432 \
+              -v vuaproxy-pgdata:/var/lib/postgresql/data \
+              --env-file /tmp/pg.env \
+              postgres:16 >/dev/null
+            sleep 3
+            docker rm vuaproxy-pg-old >/dev/null || true
+          fi
+
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p = Path("/var/www/vuaproxy-api/.env")
+          t = p.read_text()
+          t2, n = re.subn(r"(DATABASE_URL=postgres://[^@]+@)[^:/]+", r"\g<1>127.0.0.1", t, count=1)
+          if n != 1:
+              raise SystemExit("DATABASE_URL not rewritten")
+          p.write_text(t2)
+          print("rewrote DATABASE_URL host -> 127.0.0.1")
+          PY
+
+          pm2 restart vuaproxy-api --update-env
+          sleep 2
+          echo ===LOGIN===
+          curl -sS -m 8 -o /tmp/login.json -w 'login %{http_code}\n' \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"nobody-probe@example.com","password":"x"}' \
+            http://127.0.0.1:3101/auth/login
+          cat /tmp/login.json; echo
+          grep -q 'Sai email' /tmp/login.json
+          echo DB_HEAL_OK
+          R
