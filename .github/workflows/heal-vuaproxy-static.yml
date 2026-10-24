@@ -1,0 +1,68 @@
+name: heal-vuaproxy-static
+on: workflow_dispatch
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Recreate static sidecar and verify /admin
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@187.127.207.14 'bash -s' <<'R'
+          set -euo pipefail
+          echo ===BEFORE===
+          docker ps -a --format '{{.Names}} {{.Status}}' | grep -E 'caddy|vuaproxy' || true
+          curl -sS -m 5 -o /dev/null -w 'http-home %{http_code}\n' -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/ || true
+          curl -sS -m 5 -o /dev/null -w 'http-admin %{http_code}\n' -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/admin || true
+          curl -skS -m 8 -o /dev/null -w 'https-admin %{http_code}\n' --resolve vuaproxy.cloud:443:127.0.0.1 https://vuaproxy.cloud/admin || true
+          docker logs vuaproxy-static --tail 30 2>&1 || true
+
+          test -f /var/www/vuaproxy-web/index.html
+          test -f /var/www/vuaproxy-web/admin.html
+          chmod -R a+rX /var/www/vuaproxy-web /var/www/vuaproxy/uploads || true
+
+          cat >/tmp/vuaproxy-static.Caddyfile <<'EOF'
+          :3102 {
+          	handle_path /uploads/* {
+          		root * /srv/uploads
+          		file_server
+          	}
+          	handle {
+          		root * /srv/web
+          		try_files {path} {path}.html {path}/index.html /index.html
+          		file_server
+          	}
+          }
+          EOF
+
+          NET=$(docker inspect platform-caddy -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' | awk '{print $1}')
+          echo "CADDY_NET=$NET"
+          docker rm -f vuaproxy-static >/dev/null 2>&1 || true
+          docker run -d --name vuaproxy-static --restart unless-stopped --network "$NET" \
+            -v /var/www/vuaproxy-web:/srv/web:ro \
+            -v /var/www/vuaproxy/uploads:/srv/uploads:ro \
+            -v /tmp/vuaproxy-static.Caddyfile:/etc/caddy/Caddyfile:ro \
+            caddy:2-alpine >/dev/null
+          sleep 2
+
+          echo ===SIDECAR===
+          docker exec platform-caddy wget -qO- --timeout=4 http://vuaproxy-static:3102/admin 2>/dev/null | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1
+          docker exec platform-caddy wget -qO- --timeout=4 http://vuaproxy-static:3102/ 2>/dev/null | tr '\n' ' ' | grep -oE '<title>[^<]+' | head -1
+
+          docker exec platform-caddy caddy reload --config /etc/caddy/Caddyfile || docker restart platform-caddy
+          sleep 2
+
+          echo ===AFTER===
+          curl -sS -m 6 -o /dev/null -w 'http-home %{http_code}\n' -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/
+          curl -sS -m 6 -o /dev/null -w 'http-admin-path %{http_code}\n' -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/admin
+          curl -sS -m 6 -D- -o /tmp/adm.html -H 'Host: vuaproxy.cloud' http://127.0.0.1/admin | head -15
+          tr '\n' ' ' </tmp/adm.html | grep -oE '<title>[^<]+' | head -1
+          curl -skS -m 8 -o /dev/null -w 'https-admin %{http_code}\n' --resolve vuaproxy.cloud:443:127.0.0.1 https://vuaproxy.cloud/admin
+          curl -skS -m 8 -o /dev/null -w 'https-home %{http_code}\n' --resolve www.vuaproxy.cloud:443:127.0.0.1 https://www.vuaproxy.cloud/
+          curl -sS -m 5 -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/api/health; echo
+          echo HEAL_OK
+          R
