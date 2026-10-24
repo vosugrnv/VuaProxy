@@ -1,0 +1,31 @@
+name: debug-admin-login
+on: workflow_dispatch
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Reproduce login and read API error
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          export SSHPASS="$VPS_PASS"
+          sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25 root@187.127.207.14 'bash -s' <<'R'
+          set +e
+          echo ===LOGIN_LOCAL===
+          curl -sS -m 8 -D- -H 'Content-Type: application/json' \
+            -d '{"email":"phamquynhanh.hd.1994@gmail.com","password":"wrong-password-probe"}' \
+            http://127.0.0.1:3101/auth/login
+          echo
+          echo ===PM2_ERR===
+          pm2 logs vuaproxy-api --lines 40 --nostream --err 2>/dev/null | tail -50
+          echo ===DB===
+          # Do not print password hashes
+          sudo -u postgres psql -d vuaproxy -c "\d users" 2>/dev/null | head -40
+          docker exec vuaproxy-pg psql -U postgres -d vuaproxy -c "SELECT email, (password_hash IS NULL) AS hash_null, left(coalesce(password_hash,''),4) AS prefix, length(password_hash) AS n FROM users WHERE email='phamquynhanh.hd.1994@gmail.com';" 2>/dev/null \
+            || docker exec vuaproxy-pg psql -U vuaproxy -d vuaproxy -c "SELECT email, (password_hash IS NULL) AS hash_null, left(coalesce(password_hash,''),4) AS prefix, length(password_hash) AS n FROM users WHERE email='phamquynhanh.hd.1994@gmail.com';"
+          echo ===ENV_FLAGS===
+          grep -E '^(DATABASE_URL|JWT_SECRET|ADMIN_EMAILS|PORT)=' /var/www/vuaproxy-api/.env | sed -E 's/(SECRET|PASSWORD|DATABASE_URL)=.*/\1=set/'
+          echo DONE
+          R
