@@ -38,15 +38,23 @@ jobs:
           fi
 
           python3 - <<'PY'
-          import re
+          import re, subprocess
           from pathlib import Path
+          lines = subprocess.check_output(["docker", "port", "vuaproxy-pg", "5432"], text=True).splitlines()
+          bind = next((x.strip() for x in lines if x.startswith("127.0.0.1:")), lines[0].strip())
+          host, port = bind.rsplit(":", 1)
           p = Path("/var/www/vuaproxy-api/.env")
           t = p.read_text()
-          t2, n = re.subn(r"(DATABASE_URL=postgres://[^@]+@)[^:/]+", r"\g<1>127.0.0.1", t, count=1)
+          t2, n = re.subn(
+              r"(DATABASE_URL=postgres://[^@]+@)[^/]+",
+              rf"\g<1>{host}:{port}",
+              t,
+              count=1,
+          )
           if n != 1:
               raise SystemExit("DATABASE_URL not rewritten")
           p.write_text(t2)
-          print("rewrote DATABASE_URL host -> 127.0.0.1")
+          print("rewrote DATABASE_URL ->", f"{host}:{port}")
           PY
 
           pm2 restart vuaproxy-api --update-env
