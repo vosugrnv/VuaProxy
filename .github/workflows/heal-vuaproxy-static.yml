@@ -25,6 +25,8 @@ jobs:
           test -f /var/www/vuaproxy-web/admin.html
           chmod -R a+rX /var/www/vuaproxy-web /var/www/vuaproxy/uploads || true
 
+          # A previous docker bind created this path as a directory, so Caddy exited 127.
+          rm -rf /tmp/vuaproxy-static.Caddyfile
           cat >/tmp/vuaproxy-static.Caddyfile <<'EOF'
           :3102 {
           	handle_path /uploads/* {
@@ -38,6 +40,7 @@ jobs:
           	}
           }
           EOF
+          test -f /tmp/vuaproxy-static.Caddyfile
 
           NET=$(docker inspect platform-caddy -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' | awk '{print $1}')
           echo "CADDY_NET=$NET"

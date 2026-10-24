@@ -18,6 +18,8 @@ mkdir -p /var/www/vuaproxy/uploads
 chmod -R a+rX "$WEB" /var/www/vuaproxy/uploads || true
 
 # Static sidecar on same Docker network as platform-caddy (container has no /var/www)
+# Docker turns a missing bind source into a directory; that made Caddy exit 127.
+rm -rf /tmp/vuaproxy-static.Caddyfile
 cat >/tmp/vuaproxy-static.Caddyfile <<'EOF'
 :3102 {
 	handle_path /uploads/* {
