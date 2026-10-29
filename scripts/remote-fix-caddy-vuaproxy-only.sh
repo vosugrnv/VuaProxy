@@ -26,6 +26,30 @@ cat >/tmp/vuaproxy-static.Caddyfile <<'EOF'
 		root * /srv/uploads
 		file_server
 	}
+	@chiase path_regexp chiase ^/chia-se/[^/]+
+	handle @chiase {
+		root * /srv/web
+		rewrite * /chia-se-bai.html
+		file_server
+	}
+	@country path_regexp country ^/tat-ca-khu-vuc/
+	handle @country {
+		root * /srv/web
+		rewrite * /khu-vuc-quoc-gia.html
+		file_server
+	}
+	@product path_regexp product ^/tat-ca-san-pham/.+-[0-9]+/?$
+	handle @product {
+		root * /srv/web
+		rewrite * /product.html
+		file_server
+	}
+	@cat path_regexp cat ^/tat-ca-san-pham/
+	handle @cat {
+		root * /srv/web
+		rewrite * /tat-ca-san-pham.html
+		file_server
+	}
 	handle {
 		root * /srv/web
 		try_files {path} {path}.html {path}/index.html /index.html
