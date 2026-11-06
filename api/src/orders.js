@@ -4,7 +4,6 @@ const { query, withTransaction } = require("./db");
 const stock = require("./stock");
 const octoprox = require("./octoprox");
 const vpnPool = require("./vpn-pool");
-const pricing = require("./pricing");
 
 const ORDER_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -33,7 +32,7 @@ function normalizeItems(raw) {
   let total = 0;
   for (const it of raw) {
     const name = String(it.name || it.title || "").trim();
-    const qty = Math.min(500, Math.max(1, Math.round(Number(it.qty || it.quantity || 1))));
+    const qty = Math.max(1, Math.round(Number(it.qty || it.quantity || 1)));
     const price = Math.round(Number(it.price || it.priceCents || 0));
     const id = it.id != null ? String(it.id) : "";
     const image = it.image || "";
@@ -223,9 +222,8 @@ async function createOrder(req, res) {
     if (!parsed) {
       return res.status(400).json({ error: "Giỏ hàng không hợp lệ (thiếu id/tên/giá)" });
     }
-    const priced = await pricing.enforcePrices(query, parsed.items);
-    let { items } = priced;
-    let subtotal = priced.total;
+    let { items } = parsed;
+    let subtotal = parsed.total;
     let discount = 0;
     let promoCode = "";
     let promoId = null;
@@ -237,9 +235,6 @@ async function createOrder(req, res) {
       promoId = applied.promo.id;
     }
     const total = Math.max(0, subtotal - discount);
-    if (total < 1000) {
-      return res.status(400).json({ error: "Đơn tối thiểu 1.000₫" });
-    }
     const holdUntil = computeHoldUntil(items);
 
     const order = await withTransaction(async (client) => {

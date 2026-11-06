@@ -70,14 +70,6 @@ function transferDescription() {
   return ("An" + PAYOS_DESC_SUFFIX).slice(0, PAYOS_DESC_MAX);
 }
 
-function parseVnd(raw) {
-  if (typeof raw === "number") return Math.round(raw);
-  const text = String(raw ?? "").trim();
-  if (/^\d{1,3}(\.\d{3})+$/.test(text)) return Number(text.replace(/\./g, ""));
-  const digits = text.replace(/[^\d]/g, "");
-  return digits ? Number(digits) : NaN;
-}
-
 function genOrderCode() {
   // PayOS requires unique integer orderCode
   return Number(String(Date.now()).slice(-11) + String(Math.floor(Math.random() * 90 + 10)));
@@ -172,7 +164,7 @@ async function createTopup(req, res) {
         error: "Hệ thống nạp ví chưa sẵn sàng. Vui lòng thử lại sau hoặc liên hệ hỗ trợ."
       });
     }
-    const amount = parseVnd(req.body.amount);
+    const amount = Math.round(Number(req.body.amount || 0));
     if (!Number.isFinite(amount) || amount < 1000) {
       return res.status(400).json({ error: "Số tiền tối thiểu 1.000₫" });
     }
