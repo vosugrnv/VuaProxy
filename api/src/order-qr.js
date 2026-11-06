@@ -4,6 +4,7 @@ const { query, withTransaction } = require("./db");
 const stock = require("./stock");
 const octoprox = require("./octoprox");
 const vpnPool = require("./vpn-pool");
+const pricing = require("./pricing");
 
 function attach(ordersCore) {
   const {
@@ -132,8 +133,9 @@ function attach(ordersCore) {
       if (!parsed) {
         return res.status(400).json({ error: "Giỏ hàng không hợp lệ (thiếu id/tên/giá)" });
       }
-      let { items } = parsed;
-      let subtotal = parsed.total;
+      const priced = await pricing.enforcePrices(query, parsed.items);
+      let { items } = priced;
+      let subtotal = priced.total;
       let discount = 0;
       let promoCode = "";
       const codeRaw = String(req.body.promoCode || req.body.promo || "").trim();

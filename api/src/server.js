@@ -12,6 +12,7 @@ const admin = require("./admin");
 const cms = require("./cms");
 const catalogCms = require("./catalog-cms");
 const vpnPool = require("./vpn-pool");
+const { rateLimit } = require("./rate-limit");
 
 if (!config.jwtSecret || config.jwtSecret === "dev-secret-change-me") {
   console.error("Refusing to start: set a unique JWT_SECRET");
@@ -68,13 +69,34 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.post("/auth/register", auth.register);
-app.post("/auth/login", auth.login);
+const loginLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  key: (req) =>
+    "login:" +
+    (req.ip || "") +
+    ":" +
+    String(req.body?.email || req.body?.username || "")
+      .toLowerCase()
+      .slice(0, 80)
+});
+const registerLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  key: (req) => "register:" + (req.ip || "")
+});
+const uploadLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  key: (req) => "upload:" + (req.ip || "")
+});
+app.post("/auth/register", registerLimit, auth.register);
+app.post("/auth/login", loginLimit, auth.login);
 app.post("/auth/logout", auth.logout);
 app.get("/auth/me", auth.authRequired, auth.me);
 app.patch("/auth/profile", auth.authRequired, auth.updateProfile);
 app.post("/auth/avatar", auth.authRequired, auth.uploadAvatar);
-app.post("/auth/password", auth.authRequired, auth.changePassword);
+app.post("/auth/password", auth.authRequired, loginLimit, auth.changePassword);
 
 app.get("/notifications", auth.authRequired, async (req, res) => {
   try {
@@ -123,7 +145,8 @@ app.get("/stock/:productId/preview", auth.authRequired, stock.previewStock);
 
 app.post("/chat/messages", auth.optionalAuth, admin.postChatMessage);
 app.get("/chat/messages", auth.optionalAuth, admin.listChatMessages);
-app.post("/chat/upload", auth.optionalAuth, admin.uploadChatFile);
+app.post("/chat/upload", uploadLimit, auth.optionalAuth, admin.uploadChatFile);
+app.get("/chat/files/:name", auth.optionalAuth, admin.getChatFile);
 app.get("/chat/threads/mine", auth.authRequired, admin.listMyChatThreads);
 app.post("/chat/read", auth.optionalAuth, admin.markChatRead);
 

@@ -81,10 +81,12 @@ async function uploadFile(req, res) {
   try {
     ensureUploadDir();
     const raw = String(req.body.data || "");
-    const nameHint = String(req.body.filename || "upload.bin").replace(/[^a-zA-Z0-9._-]/g, "_");
     const m = raw.match(/^data:([^;]+);base64,(.+)$/);
     if (!m) return res.status(400).json({ error: "Thiếu data URL base64" });
-    const mime = m[1];
+    const mime = String(m[1] || "").toLowerCase();
+    if (!/^image\/(jpeg|jpg|png|webp|gif)$/.test(mime)) {
+      return res.status(400).json({ error: "Chỉ nhận ảnh JPG, PNG, WEBP hoặc GIF" });
+    }
     const buf = Buffer.from(m[2], "base64");
     if (buf.length > 6 * 1024 * 1024) {
       return res.status(400).json({ error: "File tối đa 6MB" });
@@ -96,9 +98,7 @@ async function uploadFile(req, res) {
           ? ".webp"
           : mime.includes("gif")
             ? ".gif"
-            : mime.includes("jpeg") || mime.includes("jpg")
-              ? ".jpg"
-              : path.extname(nameHint) || ".bin";
+            : ".jpg";
     const file = Date.now().toString(36) + "-" + crypto.randomBytes(4).toString("hex") + ext;
     fs.writeFileSync(path.join(UPLOAD_DIR, file), buf);
     const url = "/uploads/" + file;

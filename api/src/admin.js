@@ -744,11 +744,11 @@ async function deleteProductOverride(req, res) {
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
-const CHAT_UPLOAD_DIR = process.env.UPLOAD_DIR || "/var/www/vuammo/uploads";
+const CHAT_PRIVATE_DIR = process.env.CHAT_PRIVATE_DIR || "/var/www/vuaproxy/private-chat";
 
 function ensureChatUploadDir() {
   try {
-    fs.mkdirSync(CHAT_UPLOAD_DIR, { recursive: true });
+    fs.mkdirSync(CHAT_PRIVATE_DIR, { recursive: true });
   } catch (_) {}
 }
 
@@ -796,7 +796,8 @@ function bindVisitor(req, res, { issue = true, allowAdminTarget = false } = {}) 
 
 async function uploadChatFile(req, res) {
   try {
-    if (!bindVisitor(req, res, { issue: false })) {
+    const visitor = bindVisitor(req, res, { issue: false });
+    if (!visitor) {
       return res.status(401).json({ error: "Cần phiên chat hoặc đăng nhập để gửi tệp" });
     }
     ensureChatUploadDir();
@@ -843,12 +844,17 @@ async function uploadChatFile(req, res) {
                         ? ".txt"
                         : mime.includes("rar")
                           ? ".rar"
-                          : path.extname(nameHint) || ".bin";
-    const file = "chat-" + Date.now().toString(36) + "-" + crypto.randomBytes(4).toString("hex") + ext;
-    fs.writeFileSync(path.join(CHAT_UPLOAD_DIR, file), buf);
+                          : ".bin";
+    const file = "chat-" + Date.now().toString(36) + "-" + crypto.randomBytes(16).toString("hex") + ext;
+    const full = path.resolve(CHAT_PRIVATE_DIR, file);
+    if (!full.startsWith(path.resolve(CHAT_PRIVATE_DIR) + path.sep)) {
+      return res.status(400).json({ error: "Tên tệp không hợp lệ" });
+    }
+    fs.writeFileSync(full, buf, { mode: 0o600 });
+    fs.writeFileSync(full + ".owner", visitor, { mode: 0o600 });
     return res.json({
       ok: true,
-      url: "/uploads/" + file,
+      url: "/api/chat/files/" + file,
       mime,
       name: nameHint,
       size: buf.length
@@ -856,6 +862,45 @@ async function uploadChatFile(req, res) {
   } catch (err) {
     console.error("uploadChatFile", err);
     return res.status(500).json({ error: "Upload thất bại" });
+  }
+}
+
+async function getChatFile(req, res) {
+  try {
+    const name = path.basename(String(req.params.name || ""));
+    if (!/^chat-[a-z0-9]+-[a-f0-9]{32}\.[a-z0-9]{1,8}$/i.test(name)) {
+      return res.status(404).json({ error: "Không tìm thấy tệp" });
+    }
+    const root = path.resolve(CHAT_PRIVATE_DIR);
+    const full = path.resolve(root, name);
+    if (!full.startsWith(root + path.sep) || !fs.existsSync(full)) {
+      return res.status(404).json({ error: "Không tìm thấy tệp" });
+    }
+    const publicUrl = "/api/chat/files/" + name;
+    const adminUser = req.user && isAdmin(req.user);
+    if (!adminUser) {
+      const visitor = bindVisitor(req, res, { issue: false });
+      const owner = fs.existsSync(full + ".owner")
+        ? String(fs.readFileSync(full + ".owner", "utf8")).trim()
+        : "";
+      let inThread = false;
+      if (visitor) {
+        const hit = await query(
+          `SELECT 1 FROM chat_messages
+           WHERE attachment_url = $1 AND visitor_key = $2
+           LIMIT 1`,
+          [publicUrl, visitor]
+        );
+        inThread = hit.rowCount > 0;
+      }
+      if (!visitor || (owner !== visitor && !inThread)) {
+        return res.status(403).json({ error: "Không có quyền xem tệp này" });
+      }
+    }
+    return res.sendFile(full);
+  } catch (err) {
+    console.error("getChatFile", err);
+    return res.status(500).json({ error: "Không tải được tệp" });
   }
 }
 
@@ -880,7 +925,7 @@ async function postChatMessage(req, res) {
     if (!roomId || !visitorKey || (!body && !attachmentUrl)) {
       return res.status(400).json({ error: "Thiếu room/visitor/nội dung" });
     }
-    if (attachmentUrl && !/^\/uploads\/[a-zA-Z0-9._-]+$/.test(attachmentUrl)) {
+    if (attachmentUrl && !/^\/(?:uploads|api\/chat\/files)\/[A-Za-z0-9._-]+$/.test(attachmentUrl)) {
       return res.status(400).json({ error: "attachmentUrl không hợp lệ" });
     }
     if (!["support", "shop"].includes(channel)) {
@@ -1520,6 +1565,7 @@ module.exports = {
   markChatRead,
   adminChatThreads,
   uploadChatFile,
+  getChatFile,
   adminBadges,
   ackAdminBadge
 };

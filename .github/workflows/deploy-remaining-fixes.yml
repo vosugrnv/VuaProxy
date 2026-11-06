@@ -1,0 +1,100 @@
+name: deploy-remaining-fixes
+on: workflow_dispatch
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Upload API, rotate DB password, verify
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          DEST=root@187.127.207.14
+          for f in pricing.js rate-limit.js orders.js order-qr.js server.js admin.js auth.js catalog-cms.js; do
+            $SCP "api/src/$f" "$DEST:/var/www/vuaproxy-api/src/$f"
+          done
+          $SSH "$DEST" 'bash -s' <<'R'
+          set -euo pipefail
+          mkdir -p /var/www/vuaproxy/private-chat
+          chmod 700 /var/www/vuaproxy/private-chat
+          python3 - <<'PY'
+          import re, secrets, urllib.parse, subprocess
+          from pathlib import Path
+          env_path = Path("/var/www/vuaproxy-api/.env")
+          text = env_path.read_text()
+          m = re.search(r"(?m)^DATABASE_URL=(.*)$", text)
+          if not m:
+              raise SystemExit("no DATABASE_URL")
+          raw = m.group(1).strip().strip('"').strip("'")
+          parts = urllib.parse.urlsplit(raw)
+          user = urllib.parse.unquote(parts.username or "")
+          old = urllib.parse.unquote(parts.password or "")
+          db = (parts.path or "/vuaproxy").lstrip("/") or "vuaproxy"
+          if not user or not old:
+              raise SystemExit("bad DATABASE_URL")
+          new = secrets.token_urlsafe(24)
+          def psql(password, sql):
+              r = subprocess.run(
+                  ["docker", "exec", "-e", "PGPASSWORD=" + password, "vuaproxy-pg",
+                   "psql", "-U", user, "-d", db, "-v", "ON_ERROR_STOP=1", "-c", sql],
+                  capture_output=True, text=True
+              )
+              if r.returncode != 0:
+                  err = re.sub(r"postgres://\S+", "postgres://***", (r.stderr or "")[-400:])
+                  raise SystemExit("psql failed " + err)
+          psql(old, "ALTER USER " + user + " WITH PASSWORD '" + new + "'")
+          quoted = urllib.parse.quote(new, safe="")
+          host = parts.hostname or "127.0.0.1"
+          netloc = user + ":" + quoted + "@" + host + ((":" + str(parts.port)) if parts.port else "")
+          new_url = urllib.parse.urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+          new_text = text[:m.start(1)] + new_url + text[m.end(1):]
+          try:
+              env_path.write_text(new_text)
+          except Exception:
+              psql(new, "ALTER USER " + user + " WITH PASSWORD '" + old.replace("'", "''") + "'")
+              raise
+          print("DB_PASSWORD_ROTATED")
+          PY
+          pm2 restart vuaproxy-api --update-env
+          sleep 2
+          cd /var/www/vuaproxy-api
+          node -e 'require("./src/db").query("SELECT 1 AS ok").then((r)=>{console.log("db_ok", r.rows[0].ok); return require("./src/db").pool.end();}).catch(()=>{console.error("db_fail"); process.exit(1);})'
+          node <<'JS'
+          const pricing = require("./src/pricing");
+          const q = async () => ({ rows: [] });
+          (async () => {
+            const ok = await pricing.enforcePrices(q, [{
+              id: "820000", productId: "820000", countryCode: "us", packageKey: "share",
+              days: 30, price: 20000, qty: 1, name: "Proxy"
+            }]);
+            if (ok.total !== 20000) throw new Error("official price drifted");
+            let rejected = false;
+            try {
+              await pricing.enforcePrices(q, [{
+                id: "820000", productId: "820000", countryCode: "us", packageKey: "share",
+                days: 30, price: 1000, qty: 1, name: "Proxy"
+              }]);
+            } catch (err) {
+              rejected = err.status === 400;
+            }
+            if (!rejected) throw new Error("cheap price accepted");
+            console.log("price_lock_ok");
+          })().catch((err) => { console.error(err.message); process.exit(1); });
+          JS
+          echo ===HEALTH===
+          curl -sS -m 8 http://127.0.0.1:3101/health; echo
+          echo ===LOGIN===
+          printf '%s' '{"email":"nobody-probe@example.com","password":"wrong-pass"}' > /tmp/login.json
+          curl -sS -m 8 -o /tmp/login-out.json -w 'login %{http_code}\n' -H 'Content-Type: application/json' --data-binary @/tmp/login.json http://127.0.0.1:3101/auth/login
+          python3 -c 'import json; d=json.load(open("/tmp/login-out.json")); print(d.get("error",""))'
+          echo ===CHATFILE===
+          curl -sS -m 8 -o /dev/null -w 'chatfile %{http_code}\n' http://127.0.0.1:3101/chat/files/chat-abc-0123456789abcdef0123456789abcdef.png
+          echo REMAINING_OK
+          R

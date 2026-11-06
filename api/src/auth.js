@@ -141,8 +141,8 @@ async function uploadAvatar(req, res) {
     const m = raw.match(/^data:([^;]+);base64,(.+)$/);
     if (!m) return res.status(400).json({ error: "Thiếu ảnh (data URL base64)" });
     const mime = m[1].toLowerCase();
-    if (!mime.startsWith("image/")) {
-      return res.status(400).json({ error: "Chỉ chấp nhận file ảnh" });
+    if (!/^image\/(jpeg|jpg|png|webp|gif)$/.test(mime)) {
+      return res.status(400).json({ error: "Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF" });
     }
     const buf = Buffer.from(m[2], "base64");
     if (buf.length > 3 * 1024 * 1024) {
