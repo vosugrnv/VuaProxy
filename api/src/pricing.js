@@ -101,6 +101,36 @@ async function lookupDbPrices(queryFn, ids) {
  * Location lines (country + package) may be prorated by days. Other lines must
  * match the catalog price exactly, so a forged days field cannot cut the price.
  */
+function textOf(item) {
+  return [item.name, item.meta, item.id].filter(Boolean).join(" ");
+}
+
+function monthTier(item) {
+  const months = monthPrices(item.countryCode, item.packageKey);
+  if (!months.length) return 0;
+  if (months.length === 1) return months[0];
+  const text = textOf(item).toLowerCase();
+  if (/riêng|private/.test(text)) return Math.max(...months);
+  return Math.min(...months);
+}
+
+function rentalDays(item, location) {
+  if (!location) return 0;
+  const named = textOf(item).match(/(\d+)\s*ng(?:ay|ày)/i);
+  const fromName = named ? Math.round(Number(named[1])) : 0;
+  const fromField = Number(item.days) > 0 ? Math.round(Number(item.days)) : 0;
+  if (fromName && fromField && fromName !== fromField) {
+    throw Object.assign(new Error("Số ngày không khớp đơn hàng. Tải lại trang rồi đặt lại."), {
+      status: 400
+    });
+  }
+  const days = fromName || fromField || 30;
+  if (days < 1 || days > 365) {
+    throw Object.assign(new Error("Số ngày thuê không hợp lệ."), { status: 400 });
+  }
+  return days;
+}
+
 async function enforcePrices(queryFn, items) {
   const ids = [];
   for (const item of items) ids.push(item.productId, item.parentId, item.id);
@@ -121,24 +151,27 @@ async function enforcePrices(queryFn, items) {
       if (dbPrices.has(key)) bases = bases.concat(dbPrices.get(key));
       bases = bases.concat(basesFromProduct(catalog.get(key)));
     }
-    const locationMonths = monthPrices(item.countryCode, item.packageKey);
-    const location = locationMonths.length > 0;
-    if (location) bases = bases.concat(locationMonths);
+    const tier = monthTier(item);
+    const location = tier > 0;
+    if (location) bases.push(tier);
     bases = [...new Set(bases.filter((n) => n > 0))];
     if (!bases.length) {
       throw Object.assign(new Error("Không xác định được giá sản phẩm. Tải lại trang rồi đặt lại."), {
         status: 400
       });
     }
-    const allowed = location ? bases.map((base) => prorate(base, item.days || 30)) : bases;
+    const days = rentalDays(item, location);
     const sent = Math.round(Number(item.price));
-    const match = allowed.find((price) => Math.abs(price - sent) <= 1);
-    if (!match) {
+    const official = location
+      ? prorate(tier, days)
+      : bases.find((price) => Math.abs(price - sent) <= 1);
+    if (!official || !Number.isFinite(sent) || Math.abs(official - sent) > 1) {
       throw Object.assign(new Error("Giá đơn không khớp bảng giá. Tải lại trang rồi đặt lại."), {
         status: 400
       });
     }
-    item.price = match;
+    item.price = official;
+    if (location) item.days = days;
   }
   const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   return { items, total };

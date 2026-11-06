@@ -237,6 +237,9 @@ async function createOrder(req, res) {
       promoId = applied.promo.id;
     }
     const total = Math.max(0, subtotal - discount);
+    if (total < 1000) {
+      return res.status(400).json({ error: "Đơn tối thiểu 1.000₫" });
+    }
     const holdUntil = computeHoldUntil(items);
 
     const order = await withTransaction(async (client) => {

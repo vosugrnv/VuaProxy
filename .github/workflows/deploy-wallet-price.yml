@@ -1,0 +1,81 @@
+name: deploy-wallet-price
+on: workflow_dispatch
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Upload price lock and probe 1000 topup
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          DEST=root@187.127.207.14
+          for f in pricing.js orders.js wallet.js; do
+            $SCP "api/src/$f" "$DEST:/var/www/vuaproxy-api/src/$f"
+          done
+          $SSH "$DEST" 'bash -s' <<'R'
+          set -euo pipefail
+          cd /var/www/vuaproxy-api
+          pm2 restart vuaproxy-api --update-env
+          sleep 2
+          node <<'JS'
+          const pricing = require("./src/pricing");
+          const q = async () => ({ rows: [] });
+          (async () => {
+            let rejected = false;
+            try {
+              await pricing.enforcePrices(q, [{
+                id: "820000", productId: "820000", name: "Proxy · 30 ngay",
+                countryCode: "us", packageKey: "share", days: 30, price: 1000, qty: 1
+              }]);
+            } catch (err) {
+              rejected = err.status === 400;
+            }
+            if (!rejected) throw new Error("wallet still accepts 1000 for a 30-day proxy");
+            const ok = await pricing.enforcePrices(q, [{
+              id: "820000", productId: "820000", name: "Proxy · 30 ngay",
+              countryCode: "us", packageKey: "share", days: 30, price: 20000, qty: 1
+            }]);
+            if (ok.total !== 20000) throw new Error("official price drifted");
+            console.log("wallet_price_lock_ok");
+          })().catch((err) => { console.error(err.message); process.exit(1); });
+          JS
+          node <<'JS'
+          const config = require("./src/config");
+          (async () => {
+            if (!config.payos.clientId) {
+              console.log("topup1000_skip no-payos");
+              return;
+            }
+            const { PayOS } = require("@payos/node");
+            const payos = new PayOS({
+              clientId: config.payos.clientId,
+              apiKey: config.payos.apiKey,
+              checksumKey: config.payos.checksumKey
+            });
+            try {
+              await payos.paymentRequests.create({
+                orderCode: Number(String(Date.now()).slice(-9)),
+                amount: 1000,
+                description: "Nap thu",
+                returnUrl: "https://www.vuaproxy.cloud/nap-tien",
+                cancelUrl: "https://www.vuaproxy.cloud/nap-tien",
+                items: [{ name: "Nap vi", quantity: 1, price: 1000 }]
+              });
+              console.log("topup1000_ok");
+            } catch (err) {
+              const msg = String(err && (err.message || err.desc || err.error) || err).replace(/\s+/g, " ").slice(0, 180);
+              console.log("topup1000_fail", msg);
+            }
+          })().catch((err) => { console.error(String(err.message || err).slice(0, 180)); process.exit(1); });
+          JS
+          curl -sS -m 8 http://127.0.0.1:3101/health; echo
+          echo WALLET_PRICE_OK
+          R
