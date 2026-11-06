@@ -101,7 +101,10 @@ def get(k, default=""):
 pgip = "${PGIP}"
 dbcont = "${DBCONT}"
 if dbcont == "vuaproxy-pg":
-    url = f"postgres://vuaproxy:vuaproxy@{pgip}:5432/vuaproxy"
+    pw = __import__("os").environ.get("PG_PASSWORD") or ""
+    if not pw:
+        raise SystemExit("Set PG_PASSWORD")
+    url = f"postgres://vuaproxy:{pw}@{pgip}:5432/vuaproxy"
 else:
     m = re.search(r"DATABASE_URL=postgres://([^:]+):([^@]+)@", env_src)
     if m:

@@ -1,0 +1,48 @@
+name: deploy-security-fix
+on: workflow_dispatch
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Upload API and verify closed holes
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          DEST=root@187.127.207.14
+          for f in admin.js stock.js config.js server.js auth.js; do
+            $SCP "api/src/$f" "$DEST:/var/www/vuaproxy-api/src/$f"
+          done
+          $SSH "$DEST" 'bash -s' <<'R'
+          set -euo pipefail
+          pm2 restart vuaproxy-api --update-env
+          sleep 2
+          echo ===HEALTH===
+          curl -sS -m 8 http://127.0.0.1:3101/health; echo
+          echo ===STOCK===
+          curl -sS -m 8 -o /tmp/stock.json -w 'stock %{http_code}\n' http://127.0.0.1:3101/stock
+          cat /tmp/stock.json; echo
+          echo ===CHAT===
+          curl -sS -m 8 -D- -o /tmp/chat.json \
+            "http://127.0.0.1:3101/chat/messages?roomId=vuammo_support&visitorKey=u_other-person" | head -20
+          echo
+          cat /tmp/chat.json; echo
+          python3 - <<'PY'
+          import json
+          data=json.load(open("/tmp/chat.json"))
+          msgs=data.get("messages") or []
+          assert msgs == [], "guest query must not return another visitor thread"
+          print("chat_isolated", len(msgs))
+          PY
+          echo ===CORS===
+          curl -sS -m 8 -D- -o /dev/null -H 'Origin: https://evil.example' http://127.0.0.1:3101/health | grep -i access-control || echo 'no ACAO for evil (good)'
+          curl -sS -m 8 -D- -o /dev/null -H 'Origin: https://www.vuaproxy.cloud' http://127.0.0.1:3101/health | grep -i access-control-allow-origin
+          echo SECURITY_OK
+          R

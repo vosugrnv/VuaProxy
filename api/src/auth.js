@@ -28,7 +28,7 @@ function setAuthCookie(res, token) {
   res.cookie(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: process.env.COOKIE_SECURE !== "0",
     maxAge: config.jwtDays * 24 * 60 * 60 * 1000,
     path: "/"
   });

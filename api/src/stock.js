@@ -9,12 +9,13 @@ function parseLines(raw) {
 }
 
 function canManageStock(user) {
-  const admins = String(process.env.STOCK_ADMIN_EMAILS || "")
+  const extra = String(process.env.STOCK_ADMIN_EMAILS || "")
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-  if (!admins.length) return true; // MVP: mọi user đăng nhập được nhập kho
-  return admins.includes(String(user.email || "").toLowerCase());
+  const allow = extra.length ? extra : config.adminEmails;
+  if (!allow.length || !user?.email) return false;
+  return allow.includes(String(user.email).toLowerCase());
 }
 
 async function countAvailable(productId) {

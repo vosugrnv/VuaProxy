@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const path = require("path");
+const fs = require("fs");
 const config = require("./config");
 const auth = require("./auth");
 const wallet = require("./wallet");
@@ -9,14 +11,33 @@ const stock = require("./stock");
 const admin = require("./admin");
 const cms = require("./cms");
 const catalogCms = require("./catalog-cms");
+const vpnPool = require("./vpn-pool");
+
+if (!config.jwtSecret || config.jwtSecret === "dev-secret-change-me") {
+  console.error("Refusing to start: set a unique JWT_SECRET");
+  process.exit(1);
+}
 
 const app = express();
 app.set("trust proxy", 1);
+const allowedOrigins = new Set(
+  [
+    ...config.webOriginList,
+    "https://www.vuaproxy.cloud",
+    "https://vuaproxy.cloud",
+    "https://admin.vuaproxy.cloud",
+    "http://127.0.0.1:3100",
+    "http://localhost:3100",
+    "http://127.0.0.1:3101",
+    "http://localhost:3101"
+  ].filter(Boolean)
+);
 app.use(
   cors({
-    origin: (origin, cb) => {
+    origin(origin, cb) {
       if (!origin) return cb(null, true);
-      return cb(null, true);
+      if (allowedOrigins.has(origin)) return cb(null, origin);
+      return cb(null, false);
     },
     credentials: true
   })
@@ -24,12 +45,26 @@ app.use(
 app.use(express.json({ limit: "8mb" }));
 app.use(cookieParser());
 
+const uploadDir = process.env.UPLOAD_DIR || "/var/www/vuaproxy/uploads";
+try {
+  fs.mkdirSync(uploadDir, { recursive: true });
+} catch (_) {}
+app.use(
+  "/uploads",
+  express.static(uploadDir, {
+    fallthrough: true,
+    maxAge: "1d",
+    index: false
+  })
+);
+
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     payos: wallet.hasPayos(),
     mock: config.payos.mock,
-    adminConfigured: config.adminEmails.length > 0
+    adminConfigured: config.adminEmails.length > 0,
+    octoprox: require("./octoprox").isConfigured()
   });
 });
 
@@ -81,6 +116,9 @@ app.get("/products/:productId/reviews", orders.listProductReviews);
 app.get("/stock/counts", stock.getCounts);
 app.get("/stock", auth.authRequired, stock.listStock);
 app.post("/stock/import", auth.authRequired, stock.importStock);
+app.patch("/stock/item/:id", auth.authRequired, stock.updateItem);
+app.delete("/stock/item/:id", auth.authRequired, stock.deleteItem);
+app.get("/stock/:productId/items", auth.authRequired, stock.listItems);
 app.get("/stock/:productId/preview", auth.authRequired, stock.previewStock);
 
 app.post("/chat/messages", auth.optionalAuth, admin.postChatMessage);
@@ -93,6 +131,7 @@ const adm = [auth.authRequired, admin.adminRequired];
 app.get("/admin/dashboard", ...adm, admin.dashboard);
 app.get("/admin/orders", ...adm, admin.listOrders);
 app.patch("/admin/orders/:id", ...adm, admin.updateOrderStatus);
+app.post("/admin/orders/:id/warranty", ...adm, admin.warrantyOrder);
 app.get("/admin/users", ...adm, admin.listUsers);
 app.post("/admin/users/:id/credit", ...adm, admin.creditWallet);
 app.get("/admin/ledger", ...adm, admin.listLedger);
@@ -108,6 +147,53 @@ app.delete("/admin/products/:id", ...adm, admin.deleteProductOverride);
 app.get("/admin/chat/threads", ...adm, admin.adminChatThreads);
 app.get("/admin/badges", ...adm, admin.adminBadges);
 app.post("/admin/badges/ack", ...adm, admin.ackAdminBadge);
+
+app.get("/admin/vpn-pool", ...adm, async (req, res) => {
+  try {
+    return res.json(await vpnPool.snapshot());
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Không tải kho proxy" });
+  }
+});
+app.post("/admin/vpn-pool/sources", ...adm, async (req, res) => {
+  try {
+    return res.json(await vpnPool.addSource(req.body || {}));
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message || "Không thêm key" });
+  }
+});
+app.delete("/admin/vpn-pool/sources/:id", ...adm, async (req, res) => {
+  try {
+    await vpnPool.removeSource(req.params.id);
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message || "Không xóa key" });
+  }
+});
+app.put("/admin/vpn-pool/settings", ...adm, async (req, res) => {
+  try {
+    await vpnPool.saveSettings(req.body || {});
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message || "Không lưu cấu hình" });
+  }
+});
+app.post("/admin/vpn-pool/build", ...adm, async (req, res) => {
+  try {
+    return res.json(await vpnPool.buildPool());
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message || "Không dựng được" });
+  }
+});
+app.post("/admin/vpn-pool/probe", ...adm, async (req, res) => {
+  try {
+    const up = await vpnPool.probePending();
+    return res.json({ up });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || "Không dò được IP" });
+  }
+});
 
 app.get("/admin/blacklist", ...adm, cms.listBlacklist);
 app.post("/admin/blacklist", ...adm, cms.addBlacklist);

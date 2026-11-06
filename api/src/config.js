@@ -15,7 +15,7 @@ module.exports = {
   webOriginPrimary: webOriginList[0] || "http://127.0.0.1",
   webOriginList,
   databaseUrl: process.env.DATABASE_URL,
-  jwtSecret: process.env.JWT_SECRET || "dev-secret-change-me",
+  jwtSecret: process.env.JWT_SECRET || "",
   jwtDays: Number(process.env.JWT_DAYS || 14),
   holdDays: Number(process.env.HOLD_DAYS || 3),
   adminEmails: String(process.env.ADMIN_EMAILS || "")

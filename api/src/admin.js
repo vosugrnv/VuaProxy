@@ -4,7 +4,7 @@ const stock = require("./stock");
 
 function isAdmin(user) {
   if (!user?.email) return false;
-  if (!config.adminEmails.length) return true; // MVP: mọi user đăng nhập vào được admin nếu chưa cấu hình
+  if (!config.adminEmails.length) return false;
   return config.adminEmails.includes(String(user.email).toLowerCase());
 }
 
@@ -15,27 +15,99 @@ function adminRequired(req, res, next) {
   next();
 }
 
+/** Build SQL date filter fragments for a column (e.g. o.created_at). */
+function dateRangeClause(col, { range, from, to }, params) {
+  const parts = [];
+  const f = String(from || "").trim();
+  const t = String(to || "").trim();
+  const r = String(range || "").trim();
+  if (f) {
+    params.push(f);
+    parts.push(`${col} >= $${params.length}::date`);
+  }
+  if (t) {
+    params.push(t);
+    parts.push(`${col} < ($${params.length}::date + INTERVAL '1 day')`);
+  }
+  if (!f && !t) {
+    if (r === "today") parts.push(`${col} >= date_trunc('day', NOW())`);
+    else if (r === "7d") parts.push(`${col} >= NOW() - INTERVAL '7 days'`);
+    else if (r === "30d") parts.push(`${col} >= NOW() - INTERVAL '30 days'`);
+  }
+  return parts;
+}
+
 async function dashboard(req, res) {
   try {
+    const range = String(req.query.range || "all").trim();
+    const from = String(req.query.from || "").trim();
+    const to = String(req.query.to || "").trim();
+    const PAID = `('paid','delivered','disputed','released','refunded')`;
+
+    const orderParams = [];
+    const orderDate = dateRangeClause("created_at", { range, from, to }, orderParams);
+    const orderWhere = [`status IN ${PAID}`, ...orderDate];
+
+    const ledgerParams = [];
+    const ledgerDate = dateRangeClause("created_at", { range, from, to }, ledgerParams);
+    const ledgerWhere = [`type = 'purchase'`, ...ledgerDate];
+
+    const topupParams = [];
+    const topupDate = dateRangeClause("COALESCE(paid_at, created_at)", { range, from, to }, topupParams);
+    const topupWhere = [`status = 'paid'`, ...topupDate];
+
+    const userParams = [];
+    const userDate = dateRangeClause("created_at", { range, from, to }, userParams);
+    // "Users" on dashboard = users mới trong khoảng (khi có lọc); không lọc = tổng users
+    const userWhere = userDate.length ? userDate : [];
+
+    const disputeParams = [];
+    const disputeDate = dateRangeClause("created_at", { range, from, to }, disputeParams);
+    const disputeWhere = [`status = 'open'`, ...disputeDate];
+
     const [orders, revenue, topups, users, stockAvail, openDisputes] = await Promise.all([
-      query(`SELECT COUNT(*)::int AS n, COALESCE(SUM(total_cents),0)::bigint AS sum FROM orders`),
+      query(
+        `SELECT COUNT(*)::int AS n, COALESCE(SUM(total_cents),0)::bigint AS sum
+         FROM orders WHERE ${orderWhere.join(" AND ")}`,
+        orderParams
+      ),
       query(
         `SELECT COALESCE(SUM(ABS(amount_cents)),0)::bigint AS sum
-         FROM wallet_ledger WHERE type = 'purchase'`
+         FROM wallet_ledger WHERE ${ledgerWhere.join(" AND ")}`,
+        ledgerParams
       ),
       query(
         `SELECT COALESCE(SUM(amount_cents),0)::bigint AS sum
-         FROM topups WHERE status = 'paid'`
+         FROM topups WHERE ${topupWhere.join(" AND ")}`,
+        topupParams
       ),
-      query(`SELECT COUNT(*)::int AS n FROM users`),
+      query(
+        `SELECT COUNT(*)::int AS n FROM users` +
+          (userWhere.length ? ` WHERE ${userWhere.join(" AND ")}` : ""),
+        userParams
+      ),
       query(`SELECT COUNT(*)::int AS n FROM stock_items WHERE status = 'available'`),
-      query(`SELECT COUNT(*)::int AS n FROM order_disputes WHERE status = 'open'`)
+      query(
+        `SELECT COUNT(*)::int AS n FROM order_disputes WHERE ${disputeWhere.join(" AND ")}`,
+        disputeParams
+      )
     ]);
+
+    const recentParams = [];
+    const recentDate = dateRangeClause("o.created_at", { range, from, to }, recentParams);
+    const recentWhere = [`o.status IN ${PAID}`, ...recentDate];
+    recentParams.push(8);
     const recent = await query(
-      `SELECT id, public_code, total_cents, status, created_at, items_json
-       FROM orders ORDER BY created_at DESC LIMIT 8`
+      `SELECT o.id, o.public_code, o.total_cents, o.status, o.created_at, o.items_json,
+              u.email AS buyer_email, u.name AS buyer_name
+       FROM orders o
+       LEFT JOIN users u ON u.id = o.buyer_id
+       WHERE ${recentWhere.join(" AND ")}
+       ORDER BY o.created_at DESC LIMIT $${recentParams.length}`,
+      recentParams
     );
     return res.json({
+      filter: { range, from, to },
       stats: {
         orders: orders.rows[0].n,
         orderRevenue: Number(orders.rows[0].sum),
@@ -44,7 +116,8 @@ async function dashboard(req, res) {
         users: users.rows[0].n,
         stockAvailable: stockAvail.rows[0].n,
         openDisputes: openDisputes.rows[0].n,
-        payosMock: config.payos.mock
+        payosMock: config.payos.mock,
+        usersIsNewInRange: userDate.length > 0
       },
       recentOrders: recent.rows.map((r) => ({
         id: r.id,
@@ -52,7 +125,9 @@ async function dashboard(req, res) {
         total: Number(r.total_cents),
         status: r.status,
         createdAt: r.created_at,
-        items: r.items_json
+        items: r.items_json,
+        buyerEmail: r.buyer_email || "",
+        buyerName: r.buyer_name || ""
       }))
     });
   } catch (err) {
@@ -71,19 +146,43 @@ async function listOrders(req, res) {
     const to = String(req.query.to || "").trim();
 
     const counts = await query(
-      `SELECT status, COUNT(*)::int AS n FROM orders GROUP BY status`
+      `SELECT
+         COUNT(*) FILTER (WHERE status NOT IN ('pending_payment','expired'))::int AS all,
+         COUNT(*) FILTER (
+           WHERE status IN ('paid','delivered')
+             AND (hold_until IS NULL OR hold_until > NOW())
+         )::int AS waiting,
+         COUNT(*) FILTER (
+           WHERE status IN ('released','refunded')
+              OR (status IN ('paid','delivered') AND hold_until IS NOT NULL AND hold_until <= NOW())
+         )::int AS done,
+         COUNT(*) FILTER (WHERE status = 'disputed')::int AS disputed
+       FROM orders`
     );
-    const countMap = { all: 0 };
-    counts.rows.forEach((r) => {
-      countMap[r.status] = r.n;
-      countMap.all += r.n;
-    });
+    const countMap = {
+      all: counts.rows[0]?.all || 0,
+      waiting: counts.rows[0]?.waiting || 0,
+      done: counts.rows[0]?.done || 0,
+      disputed: counts.rows[0]?.disputed || 0
+    };
 
     const params = [];
     const where = [];
-    if (status && status !== "all") {
+    if (status === "waiting") {
+      where.push(`o.status IN ('paid','delivered')`);
+      where.push(`(o.hold_until IS NULL OR o.hold_until > NOW())`);
+    } else if (status === "done") {
+      where.push(
+        `(o.status IN ('released','refunded') OR (o.status IN ('paid','delivered') AND o.hold_until IS NOT NULL AND o.hold_until <= NOW()))`
+      );
+    } else if (status === "disputed") {
+      where.push(`o.status = 'disputed'`);
+    } else if (status && status !== "all") {
+      // legacy keys still accepted
       params.push(status);
       where.push(`o.status = $${params.length}`);
+    } else {
+      where.push(`o.status NOT IN ('pending_payment','expired')`);
     }
     if (q) {
       params.push("%" + q + "%");
@@ -111,10 +210,16 @@ async function listOrders(req, res) {
       `SELECT o.id, o.public_code, o.buyer_id, u.email AS buyer_email, u.name AS buyer_name,
               o.items_json, o.total_cents, o.status, o.delivery_note, o.delivery_payload,
               o.hold_until, o.created_at, o.released_at,
-              d.status AS dispute_status, d.reason AS dispute_reason
+              d.status AS dispute_status, d.reason AS dispute_reason,
+              COALESCE(w.warranty_count, 0)::int AS warranty_count
        FROM orders o
        JOIN users u ON u.id = o.buyer_id
-       LEFT JOIN order_disputes d ON d.order_id = o.id` +
+       LEFT JOIN order_disputes d ON d.order_id = o.id
+       LEFT JOIN (
+         SELECT order_id, COUNT(*)::int AS warranty_count
+         FROM order_warranties
+         GROUP BY order_id
+       ) w ON w.order_id = o.id` +
       (where.length ? ` WHERE ${where.join(" AND ")}` : "") +
       ` ORDER BY o.created_at DESC LIMIT $${params.length}`;
     const r = await query(sql, params);
@@ -134,6 +239,7 @@ async function listOrders(req, res) {
         holdUntil: row.hold_until,
         createdAt: row.created_at,
         releasedAt: row.released_at,
+        warrantyCount: row.warranty_count || 0,
         dispute: row.dispute_status
           ? { status: row.dispute_status, reason: row.dispute_reason }
           : null
@@ -646,8 +752,53 @@ function ensureChatUploadDir() {
   } catch (_) {}
 }
 
+const VISITOR_COOKIE = "vp_visitor";
+
+function visitorCookieOpts() {
+  return {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.COOKIE_SECURE !== "0",
+    maxAge: 400 * 24 * 60 * 60 * 1000,
+    path: "/"
+  };
+}
+
+function readGuestCookie(req) {
+  const c = String(req.cookies?.[VISITOR_COOKIE] || "");
+  return /^v_[a-f0-9]{32}$/.test(c) ? c : "";
+}
+
+function issueGuestCookie(res) {
+  const key = "v_" + crypto.randomBytes(16).toString("hex");
+  res.cookie(VISITOR_COOKIE, key, visitorCookieOpts());
+  return key;
+}
+
+/** Non-admins never choose a thread key. Admins may open a customer's thread. */
+function bindVisitor(req, res, { issue = true, allowAdminTarget = false } = {}) {
+  if (req.user && isAdmin(req.user) && allowAdminTarget) {
+    const requested = String(
+      (req.body && req.body.visitorKey) || (req.query && req.query.visitorKey) || ""
+    )
+      .trim()
+      .slice(0, 80);
+    if (requested && requested !== "anon" && /^[A-Za-z0-9_-]{4,80}$/.test(requested)) {
+      return requested;
+    }
+  }
+  if (req.user && req.user.id) return "u_" + String(req.user.id);
+  const existing = readGuestCookie(req);
+  if (existing) return existing;
+  if (!issue) return "";
+  return issueGuestCookie(res);
+}
+
 async function uploadChatFile(req, res) {
   try {
+    if (!bindVisitor(req, res, { issue: false })) {
+      return res.status(401).json({ error: "Cần phiên chat hoặc đăng nhập để gửi tệp" });
+    }
     ensureChatUploadDir();
     const raw = String(req.body.data || "");
     const nameHint = String(req.body.filename || "file.bin").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
@@ -712,7 +863,7 @@ async function postChatMessage(req, res) {
   try {
     const roomId = String(req.body.roomId || "").trim();
     const channel = String(req.body.channel || "").trim();
-    const visitorKey = String(req.body.visitorKey || "").trim().slice(0, 80);
+    const visitorKey = bindVisitor(req, res, { allowAdminTarget: true });
     const body = String(req.body.body || "").trim().slice(0, 4000);
     const role = String(req.body.role || "user").trim();
     const shopToken = String(req.body.shopToken || "").trim();
@@ -740,12 +891,18 @@ async function postChatMessage(req, res) {
     }
     let userId = null;
     let finalRole = "user";
+    let threadVisitor = visitorKey;
     if (req.user) {
-      userId = req.user.id;
       if (["support", "shop", "admin"].includes(role) && isAdmin(req.user)) {
         finalRole = role === "shop" ? "shop" : role === "admin" ? "admin" : "support";
+        // Admin reply stays in the customer's thread — do NOT stamp admin user_id
+        // (that used to leak replies across threads via OR user_id).
+        userId = null;
       } else {
         finalRole = "user";
+        userId = req.user.id;
+        // Force one thread per account
+        threadVisitor = "u_" + String(req.user.id);
       }
     }
     const textBody = body || (attachmentUrl ? "[Đã gửi tệp đính kèm]" : "");
@@ -761,7 +918,7 @@ async function postChatMessage(req, res) {
         channel,
         shopToken,
         shopName,
-        visitorKey,
+        threadVisitor,
         userId,
         finalRole,
         textBody,
@@ -780,32 +937,22 @@ async function postChatMessage(req, res) {
 async function listChatMessages(req, res) {
   try {
     const roomId = String(req.query.roomId || "").trim();
-    const visitorKey = String(req.query.visitorKey || "").trim();
+    const visitorKey = bindVisitor(req, res, { allowAdminTarget: true });
     if (!roomId || !visitorKey) {
-      return res.status(400).json({ error: "Thiếu roomId/visitorKey" });
+      return res.status(400).json({ error: "Thiếu roomId" });
     }
     const cols =
       "id, room_id, channel, shop_token, shop_name, visitor_key, role, body, attachment_url, attachment_name, attachment_mime, created_at";
-    let r;
-    if (req.user && req.user.id) {
-      r = await query(
-        `SELECT ${cols}
-         FROM chat_messages
-         WHERE room_id = $1 AND (visitor_key = $2 OR user_id = $3)
-         ORDER BY created_at ASC
-         LIMIT 300`,
-        [roomId, visitorKey, req.user.id]
-      );
-    } else {
-      r = await query(
-        `SELECT ${cols}
-         FROM chat_messages
-         WHERE room_id = $1 AND visitor_key = $2
-         ORDER BY created_at ASC
-         LIMIT 300`,
-        [roomId, visitorKey]
-      );
-    }
+    // Isolate strictly by visitor_key (do NOT OR user_id — that leaked admin replies
+    // across every customer thread because admin replies shared admin user_id).
+    const r = await query(
+      `SELECT ${cols}
+       FROM chat_messages
+       WHERE room_id = $1 AND visitor_key = $2
+       ORDER BY created_at ASC
+       LIMIT 300`,
+      [roomId, visitorKey]
+    );
     return res.json({ messages: r.rows });
   } catch (err) {
     console.error(err);
@@ -815,13 +962,11 @@ async function listChatMessages(req, res) {
 
 async function listMyChatThreads(req, res) {
   try {
-    const visitorKey = String(req.query.visitorKey || "").trim().slice(0, 80);
-    const params = [req.user.id];
-    let where = "user_id = $1";
-    if (visitorKey) {
-      params.push(visitorKey);
-      where = "(user_id = $1 OR visitor_key = $2)";
-    }
+    const uidKey = "u_" + String(req.user.id);
+    const visitorKey = uidKey;
+    const params = [req.user.id, uidKey];
+    // Only this account's thread keys — never merge arbitrary guest visitorKey
+    let where = "(user_id = $1 OR visitor_key = $2)";
     const readerId = String(req.user.id);
     const r = await query(
       `SELECT room_id AS "roomId",
@@ -887,9 +1032,9 @@ async function listMyChatThreads(req, res) {
 async function markChatRead(req, res) {
   try {
     const roomId = String(req.body.roomId || "").trim();
-    const visitorKey = String(req.body.visitorKey || "").trim().slice(0, 80);
+    const visitorKey = bindVisitor(req, res, { allowAdminTarget: true });
     if (!roomId || !visitorKey) {
-      return res.status(400).json({ error: "Thiếu roomId/visitorKey" });
+      return res.status(400).json({ error: "Thiếu roomId" });
     }
     let readerRole = "user";
     let readerId = visitorKey;
@@ -932,10 +1077,15 @@ async function adminChatThreads(req, res) {
                 t.user_id,
                 COALESCE(NULLIF(TRIM(u.name), ''), '') AS user_name,
                 COALESCE(NULLIF(TRIM(u.email), ''), '') AS user_email,
-                CASE
-                  WHEN t.last_role = 'user' AND (r.last_read_at IS NULL OR t.last_at > r.last_read_at)
-                  THEN 1 ELSE 0
-                END AS unread
+                COALESCE((
+                  SELECT COUNT(*)::int
+                  FROM chat_messages m
+                  WHERE m.channel = 'shop'
+                    AND m.shop_token = $1
+                    AND m.visitor_key = t.visitor_key
+                    AND m.role = 'user'
+                    AND (r.last_read_at IS NULL OR m.created_at > r.last_read_at)
+                ), 0) AS unread
          FROM (
            SELECT visitor_key,
                   MAX(shop_name) AS shop_name,
@@ -980,23 +1130,18 @@ async function adminChatThreads(req, res) {
            GROUP BY shop_token
          ) t
          LEFT JOIN (
-           SELECT x.shop_token, COUNT(*)::int AS pending
-           FROM (
-             SELECT c.shop_token, c.visitor_key, c.room_id,
-                    MAX(c.created_at) AS last_at,
-                    (ARRAY_AGG(c.role ORDER BY c.created_at DESC))[1] AS last_role
-             FROM chat_messages c
-             WHERE c.channel = 'shop' AND c.shop_token <> ''
-             GROUP BY c.shop_token, c.visitor_key, c.room_id
-           ) x
+           SELECT c.shop_token, COUNT(*)::int AS pending
+           FROM chat_messages c
            LEFT JOIN chat_reads r
-             ON r.room_id = x.room_id
-            AND r.visitor_key = x.visitor_key
+             ON r.room_id = c.room_id
+            AND r.visitor_key = c.visitor_key
             AND r.reader_role = 'admin'
             AND r.reader_id = 'admin'
-           WHERE x.last_role = 'user'
-             AND (r.last_read_at IS NULL OR x.last_at > r.last_read_at)
-           GROUP BY x.shop_token
+           WHERE c.channel = 'shop'
+             AND c.shop_token <> ''
+             AND c.role = 'user'
+             AND (r.last_read_at IS NULL OR c.created_at > r.last_read_at)
+           GROUP BY c.shop_token
          ) p ON p.shop_token = t.shop_token
          ORDER BY pending DESC, t.last_at DESC
          LIMIT 500`
@@ -1012,10 +1157,14 @@ async function adminChatThreads(req, res) {
                 t.user_id,
                 COALESCE(NULLIF(TRIM(u.name), ''), '') AS user_name,
                 COALESCE(NULLIF(TRIM(u.email), ''), '') AS user_email,
-                CASE
-                  WHEN t.last_role = 'user' AND (r.last_read_at IS NULL OR t.last_at > r.last_read_at)
-                  THEN 1 ELSE 0
-                END AS unread
+                COALESCE((
+                  SELECT COUNT(*)::int
+                  FROM chat_messages m
+                  WHERE m.channel = 'support'
+                    AND m.visitor_key = t.visitor_key
+                    AND m.role = 'user'
+                    AND (r.last_read_at IS NULL OR m.created_at > r.last_read_at)
+                ), 0) AS unread
          FROM (
            SELECT visitor_key,
                   MAX(room_id) AS room_id,
@@ -1062,8 +1211,9 @@ async function ackAdminBadge(req, res) {
     if (!allowed.has(key)) {
       return res.status(400).json({ error: "Badge không hợp lệ" });
     }
+    // Chat badges chỉ giảm khi admin mở đúng hội thoại (/chat/read)
     if (key === "chatSupport" || key === "chatShop") {
-      await markAllChannelRead(key === "chatSupport" ? "support" : "shop");
+      return res.json({ ok: true, key, skippedMarkAll: true });
     }
     await query(
       `INSERT INTO admin_badge_acks (badge_key, last_ack_at)
@@ -1133,41 +1283,30 @@ async function adminBadges(_req, res) {
         [ackOr("disputes")]
       ),
       query(
-        `SELECT COUNT(*)::int AS n FROM (
-           SELECT t.visitor_key
-           FROM (
-             SELECT visitor_key, MAX(room_id) AS room_id, MAX(created_at) AS last_at,
-                    (ARRAY_AGG(role ORDER BY created_at DESC))[1] AS last_role
-             FROM chat_messages WHERE channel = 'support'
-             GROUP BY visitor_key
-           ) t
-           LEFT JOIN chat_reads r
-             ON r.room_id = t.room_id
-            AND r.visitor_key = t.visitor_key
-            AND r.reader_role = 'admin'
-            AND r.reader_id = 'admin'
-           WHERE t.last_role = 'user'
-             AND (r.last_read_at IS NULL OR t.last_at > r.last_read_at)
-         ) x`
-      ),
-      query(
-        `SELECT shop_token, COUNT(*)::int AS pending
-         FROM (
-           SELECT c.shop_token, c.visitor_key, c.room_id,
-                  MAX(c.created_at) AS last_at,
-                  (ARRAY_AGG(c.role ORDER BY c.created_at DESC))[1] AS last_role
-           FROM chat_messages c
-           WHERE c.channel = 'shop' AND c.shop_token <> ''
-           GROUP BY c.shop_token, c.visitor_key, c.room_id
-         ) x
+        `SELECT COUNT(*)::int AS n
+         FROM chat_messages c
          LEFT JOIN chat_reads r
-           ON r.room_id = x.room_id
-          AND r.visitor_key = x.visitor_key
+           ON r.room_id = c.room_id
+          AND r.visitor_key = c.visitor_key
           AND r.reader_role = 'admin'
           AND r.reader_id = 'admin'
-         WHERE x.last_role = 'user'
-           AND (r.last_read_at IS NULL OR x.last_at > r.last_read_at)
-         GROUP BY shop_token`
+         WHERE c.channel = 'support'
+           AND c.role = 'user'
+           AND (r.last_read_at IS NULL OR c.created_at > r.last_read_at)`
+      ),
+      query(
+        `SELECT c.shop_token, COUNT(*)::int AS pending
+         FROM chat_messages c
+         LEFT JOIN chat_reads r
+           ON r.room_id = c.room_id
+          AND r.visitor_key = c.visitor_key
+          AND r.reader_role = 'admin'
+          AND r.reader_id = 'admin'
+         WHERE c.channel = 'shop'
+           AND c.shop_token <> ''
+           AND c.role = 'user'
+           AND (r.last_read_at IS NULL OR c.created_at > r.last_read_at)
+         GROUP BY c.shop_token`
       ),
       query(
         `SELECT COUNT(*)::int AS n FROM blog_posts
@@ -1204,12 +1343,165 @@ async function adminBadges(_req, res) {
   }
 }
 
+async function warrantyOrder(req, res) {
+  try {
+    const orderId = String(req.params.id || "").trim();
+    if (!orderId) return res.status(400).json({ error: "Thiếu mã đơn" });
+
+    const rawItems = Array.isArray(req.body.items) ? req.body.items : [];
+    if (!rawItems.length) {
+      return res.status(400).json({ error: "Chọn sản phẩm / số lượng bảo hành" });
+    }
+
+    const result = await withTransaction(async (client) => {
+      const cur = await client.query(
+        `SELECT id, buyer_id, public_code, items_json, delivery_payload, delivery_note, status, guest_email
+         FROM orders WHERE id = $1 FOR UPDATE`,
+        [orderId]
+      );
+      if (!cur.rows[0]) {
+        const err = new Error("Không tìm thấy đơn");
+        err.status = 404;
+        throw err;
+      }
+      const order = cur.rows[0];
+      if (["pending_payment", "expired"].includes(order.status)) {
+        const err = new Error("Đơn chưa thanh toán / đã hết hạn — không bảo hành được");
+        err.status = 400;
+        throw err;
+      }
+      if (order.status === "refunded") {
+        const err = new Error("Đơn đã hoàn tiền — không bảo hành được");
+        err.status = 400;
+        throw err;
+      }
+
+      const orderItems = Array.isArray(order.items_json) ? order.items_json : [];
+      const byKey = {};
+      orderItems.forEach((it) => {
+        const pid = stock.resolveStockProductId(it);
+        if (pid) byKey[pid] = it;
+        const wid = stock.resolveWarrantyStockProductId(it);
+        if (wid) byKey[wid] = it;
+        if (it && it.id) byKey[String(it.id)] = it;
+      });
+
+      const claimItems = [];
+      for (const row of rawItems) {
+        const rowPid = stock.resolveStockProductId(row);
+        const origin =
+          byKey[rowPid] ||
+          byKey[String(row.productId || "")] ||
+          byKey[String(row.id || "")] ||
+          orderItems.find((x) => String(x.id) === String(row.id || row.productId || ""));
+        const merged = Object.assign({}, origin || {}, row);
+        const productId = stock.resolveWarrantyStockProductId(merged);
+        const qty = Math.max(0, Math.round(Number(row.qty || 0)));
+        if (!productId || qty < 1) continue;
+        const maxQty = Math.max(1, Math.round(Number((origin && origin.qty) || row.qty || 1)));
+        if (qty > maxQty) {
+          const err = new Error(
+            "Số lượng bảo hành (" + qty + ") vượt quá số lượng đơn (" + maxQty + ") cho " + productId
+          );
+          err.status = 400;
+          throw err;
+        }
+        claimItems.push({
+          id: (origin && origin.id) || productId,
+          productId,
+          name: (origin && origin.name) || row.name || productId,
+          qty,
+          meta: (origin && origin.meta) || "",
+          countryCode: (origin && (origin.countryCode || origin.country_code)) || row.countryCode,
+          packageKey: (origin && (origin.packageKey || origin.package_key)) || row.packageKey
+        });
+      }
+      if (!claimItems.length) {
+        const err = new Error("Số lượng bảo hành không hợp lệ");
+        err.status = 400;
+        throw err;
+      }
+
+      const seqRow = await client.query(
+        `SELECT COALESCE(MAX(seq), 0)::int AS n FROM order_warranties WHERE order_id = $1`,
+        [order.id]
+      );
+      const seq = (seqRow.rows[0]?.n || 0) + 1;
+      const baseCode =
+        String(order.public_code || "")
+          .trim()
+          .toUpperCase() || String(order.id).replace(/-/g, "").slice(0, 10).toUpperCase();
+      const warrantyCode = baseCode + "-BH" + seq;
+
+      const delivered = await stock.allocateForItems(client, order.id, claimItems, {
+        requireRealStock: true
+      });
+      const fullNote = stock.formatCustomerDeliveryNote({
+        warrantyCode,
+        baseCode,
+        delivered
+      });
+
+      const ins = await client.query(
+        `INSERT INTO order_warranties
+           (order_id, warranty_code, seq, items_json, delivery_payload, delivery_note, created_by)
+         VALUES ($1,$2,$3,$4::jsonb,$5::jsonb,$6,$7)
+         RETURNING id, warranty_code, seq, delivery_payload, delivery_note, created_at`,
+        [
+          order.id,
+          warrantyCode,
+          seq,
+          JSON.stringify(claimItems),
+          JSON.stringify(delivered),
+          fullNote,
+          req.user?.id || null
+        ]
+      );
+
+      // Push delivery into support chat for this buyer
+      if (order.buyer_id) {
+        const visitorKey = "u_" + String(order.buyer_id);
+        await client.query(
+          `INSERT INTO chat_messages
+             (room_id, channel, shop_token, shop_name, visitor_key, user_id, role, body)
+           VALUES ('vuammo_support','support','','',$1,NULL,'support',$2)`,
+          [visitorKey, fullNote]
+        );
+      }
+
+      return {
+        warranty: ins.rows[0],
+        warrantyCode,
+        seq,
+        delivered,
+        deliveryNote: fullNote,
+        orderCode: baseCode,
+        buyerId: order.buyer_id
+      };
+    });
+
+    return res.json({
+      ok: true,
+      warrantyCode: result.warrantyCode,
+      seq: result.seq,
+      delivery: result.delivered,
+      deliveryNote: result.deliveryNote,
+      orderCode: result.orderCode
+    });
+  } catch (err) {
+    console.error(err);
+    const status = err.status || 500;
+    return res.status(status).json({ error: err.message || "Không bảo hành được" });
+  }
+}
+
 module.exports = {
   isAdmin,
   adminRequired,
   dashboard,
   listOrders,
   updateOrderStatus,
+  warrantyOrder,
   listUsers,
   creditWallet,
   listLedger,

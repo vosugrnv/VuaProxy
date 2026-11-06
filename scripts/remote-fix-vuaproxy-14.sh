@@ -23,16 +23,17 @@ PACK
 sshpass -e scp -o StrictHostKeyChecking=no "root@$SRC:/tmp/vuaproxy.sql" /tmp/vuaproxy.sql
 sshpass -e scp -o StrictHostKeyChecking=no "root@$SRC:/tmp/vuaproxy-env.keys" /tmp/vuaproxy-env.keys || true
 
+: "${PG_PASSWORD:?Set PG_PASSWORD}"
 echo "=== ensure postgres 16 container ==="
 if ! docker ps --format '{{.Names}}' | grep -qx vuaproxy-pg; then
   docker rm -f vuaproxy-pg 2>/dev/null || true
   docker run -d --name vuaproxy-pg --restart unless-stopped \
-    -e POSTGRES_USER=vuaproxy -e POSTGRES_PASSWORD='VpR0xy_14!' -e POSTGRES_DB=vuaproxy \
+    -e POSTGRES_USER=vuaproxy -e POSTGRES_PASSWORD="$PG_PASSWORD" -e POSTGRES_DB=vuaproxy \
     -v vuaproxy-pgdata:/var/lib/postgresql/data postgres:16
   sleep 8
 else
   # reset password to known value
-  docker exec -i vuaproxy-pg psql -U vuaproxy -d postgres -c "ALTER USER vuaproxy WITH PASSWORD 'VpR0xy_14!';" || true
+  docker exec -i vuaproxy-pg psql -U vuaproxy -d postgres -c "ALTER USER vuaproxy WITH PASSWORD '${PG_PASSWORD}';" || true
 fi
 PGIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vuaproxy-pg | awk '{print $1}')
 echo "PGIP=$PGIP"
@@ -55,7 +56,7 @@ import re
 env_path = Path("/var/www/vuaproxy-api/.env")
 t = env_path.read_text() if env_path.exists() else ""
 keys = Path("/tmp/vuaproxy-env.keys").read_text() if Path("/tmp/vuaproxy-env.keys").exists() else ""
-url = f"postgres://vuaproxy:VpR0xy_14!@${PGIP}:5432/vuaproxy"
+url = "postgres://vuaproxy:" + __import__("os").environ["PG_PASSWORD"] + "@${PGIP}:5432/vuaproxy"
 def setk(text, k, v):
     if re.search(rf"^{re.escape(k)}=", text, re.M):
         return re.sub(rf"^{re.escape(k)}=.*$", f"{k}={v}", text, count=1, flags=re.M)
