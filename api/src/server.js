@@ -12,6 +12,7 @@ const admin = require("./admin");
 const cms = require("./cms");
 const catalogCms = require("./catalog-cms");
 const vpnPool = require("./vpn-pool");
+const proxyCheck = require("./proxy-check");
 const { rateLimit } = require("./rate-limit");
 
 if (!config.jwtSecret || config.jwtSecret === "dev-secret-change-me") {
@@ -134,6 +135,14 @@ app.post("/orders/:id/dispute", auth.authRequired, orders.disputeOrder);
 app.post("/orders/:id/dispute/withdraw", auth.authRequired, orders.withdrawDispute);
 app.post("/orders/:id/review", auth.authRequired, orders.reviewOrder);
 app.get("/products/:productId/reviews", orders.listProductReviews);
+
+const proxyCheckLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 8,
+  key: (req) => "proxy-check:" + (req.ip || "")
+});
+app.post("/proxy-check/submit", proxyCheckLimit, proxyCheck.submit);
+app.get("/proxy-check/result", proxyCheck.result);
 
 app.get("/stock/counts", stock.getCounts);
 app.get("/stock", auth.authRequired, stock.listStock);

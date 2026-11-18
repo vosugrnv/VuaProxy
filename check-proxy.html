@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HXPVPM0RJL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-HXPVPM0RJL');
+</script>
+
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="/images/favicon.png?v=20260915prev">
+<link rel="icon" type="image/png" href="/images/favicon.png?v=20260915prev">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=20260915prev">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check Proxy — Kiểm tra proxy live/die | Vua Proxy</title>
+<meta name="description" content="Công cụ Check Proxy của Vua Proxy: dán danh sách proxy, chọn định dạng HTTP/SOCKS5, xem live/die, IP và độ trễ ngay trên website.">
+<link rel="canonical" href="https://www.vuaproxy.cloud/check-proxy">
+<meta name="robots" content="index,follow">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:site_name" content="Vua Proxy">
+<meta property="og:title" content="Check Proxy — Kiểm tra proxy live/die | Vua Proxy">
+<meta property="og:description" content="Kiểm tra proxy live/die, IP và loại HTTP/SOCKS5 ngay trên Vua Proxy.">
+<meta property="og:url" content="https://www.vuaproxy.cloud/check-proxy">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Check Proxy | Vua Proxy">
+<meta name="twitter:description" content="Kiểm tra proxy live/die, IP và loại HTTP/SOCKS5 ngay trên Vua Proxy.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=20260911spy3">
+<link rel="stylesheet" href="css/check-proxy.css?v=20261118cp1">
+</head>
+<body>
+
+<aside class="side-nav hide-mobile" id="sideNav">
+ <button class="side-nav-toggle" id="sideNavToggle" aria-label="Tất cả danh mục">
+ <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+ </button>
+ <a href="/tat-ca-khu-vuc" class="side-nav-item" title="Tất cả quốc gia">
+ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+ </a>
+</aside>
+
+<header class="site-header">
+ <div class="container header-inner">
+ <button class="icon-btn hide-desktop" id="menuBtn" aria-label="Menu">
+ <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+ </button>
+ <a href="/" class="logo">
+ <img class="logo-img" src="images/logo-vuaproxy.png?v=20260915logo1" alt="Vua Proxy - Proxy tĩnh &amp; proxy xoay đa quốc gia">
+ </a>
+ <div class="search-bar">
+ <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+ <input type="text" placeholder="Tìm proxy theo quốc gia...">
+ </div>
+ <a href="/lien-he" class="header-phone hide-mobile" title="Hỗ trợ 24/7">
+ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>
+ <span>Hỗ trợ 24/7</span>
+ </a>
+ <button class="icon-btn hide-desktop" id="userBtn" aria-label="Tài khoản">
+ <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7"/><path d="M4.5 20c1.6-3.6 4.5-5.5 7.5-5.5s5.9 1.9 7.5 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+ </button>
+ </div>
+ <div class="nav-row hide-mobile">
+ <div class="container nav-row-inner">
+ <button class="cat-menu-btn" id="catMenuBtn" type="button">
+ <span class="cat-menu-icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+ <span>Tất cả danh mục</span>
+ </button>
+ <nav class="nav-links">
+ <a href="/gioi-thieu"><span class="nav-ico nav-ico--blue" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>Giới Thiệu</a>
+ <a href="/tat-ca-khu-vuc" class="nav-all-proxy" id="navAllProxy" aria-haspopup="true" aria-expanded="false"><span class="nav-ico nav-ico--red" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Tất cả Proxy<span class="nav-all-proxy-caret" aria-hidden="true"></span></a>
+ <a href="/check-proxy"><span class="nav-ico nav-ico--teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span>Check Proxy</a>
+ <a href="/chia-se"><span class="nav-ico nav-ico--orange" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span>Chia sẻ</a>
+ <a href="/lien-he"><span class="nav-ico nav-ico--green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg></span>Liên hệ</a>
+ <a href="/nap-tien"><span class="nav-ico nav-ico--pink" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><path d="M16 14h2"/></svg></span>Nạp tiền</a>
+ </nav>
+ <div class="nav-actions" id="headerActions"></div>
+ </div>
+ </div>
+</header>
+
+<nav class="drawer" id="drawer">
+ <div class="drawer-inner">
+ <div class="drawer-title">Menu</div>
+ <a href="/check-proxy">Check Proxy</a>
+ <a href="/tat-ca-khu-vuc">Tất cả quốc gia</a>
+ <a href="/nap-tien">Nạp tiền</a>
+ </div>
+</nav>
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+<main class="check-proxy-page">
+ <div class="cp-wrap">
+  <div class="cp-left">
+   <div class="cp-form">
+    <label for="proxyFormat">Proxy Format</label>
+    <select id="proxyFormat">
+     <option value="host:port:username:password">host:port:username:password</option>
+     <option value="username:password@host:port">username:password@host:port</option>
+     <option value="username:password:host:port">username:password:host:port</option>
+     <option value="host:port@username:password">host:port@username:password</option>
+     <option value="host:port">host:port</option>
+    </select>
+
+    <label for="proxyType">Proxy Type</label>
+    <select id="proxyType">
+     <option value="auto">Auto (HTTP then SOCKS5)</option>
+     <option value="http">HTTP</option>
+     <option value="socks5">SOCKS5</option>
+    </select>
+
+    <label for="proxyList">Proxy List (0)</label>
+    <textarea id="proxyList" rows="5" placeholder="Enter Proxies"></textarea>
+
+    <button type="button" id="checkButton" class="cp-btn">Check</button>
+    <div class="cp-progress" id="progressBar"><div class="cp-progress-fill" id="progressFill"></div></div>
+    <div class="cp-progress-text" id="progressText"></div>
+   </div>
+
+   <div class="cp-status">
+    <h2 class="active-proxy">Active Proxies (0)</h2>
+    <textarea id="activeProxies" readonly></textarea>
+    <button type="button" class="cp-btn cp-btn--copy" data-copy="activeProxies">Copy</button>
+   </div>
+   <div class="cp-status">
+    <h2 class="inactive-proxy">Inactive Proxies (0)</h2>
+    <textarea id="inactiveProxies" readonly></textarea>
+    <button type="button" class="cp-btn cp-btn--copy" data-copy="inactiveProxies">Copy</button>
+   </div>
+  </div>
+
+  <div class="cp-right">
+   <div class="cp-results">
+    <h2>Proxy Check Results</h2>
+    <table>
+     <thead>
+      <tr>
+       <th>No</th>
+       <th>Proxy</th>
+       <th>IP Address</th>
+       <th>Status</th>
+       <th>Type</th>
+      </tr>
+     </thead>
+     <tbody id="resultTable"></tbody>
+    </table>
+   </div>
+  </div>
+ </div>
+</main>
+
+<footer class="site-footer"></footer>
+<div class="toast" id="toast"></div>
+
+<script src="js/api-client.js"></script>
+<script src="js/chat-widget.js?v=20260918chatbadge1"></script>
+<script src="js/site-header.js?v=20261118cp1"></script>
+<script src="js/auth.js?v=20260909hdr2"></script>
+<script src="js/layout.js?v=20260916cat1"></script>
+<script src="js/check-proxy.js?v=20261118cp1"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+name: deploy-check-proxy
+on: workflow_dispatch
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+      - name: Deploy Check Proxy page and API
+        env:
+          VPS_PASS: ${{ secrets.VPS_PASS }}
+        run: |
+          set -euo pipefail
+          export SSHPASS="$VPS_PASS"
+          SSH="sshpass -e ssh -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          SCP="sshpass -e scp -o StrictHostKeyChecking=no -o ConnectTimeout=25"
+          DEST=root@187.127.207.14
+          WEB=/var/www/vuaproxy-web
+          $SCP check-proxy.html "$DEST:$WEB/check-proxy.html"
+          $SCP css/check-proxy.css "$DEST:$WEB/css/check-proxy.css"
+          $SCP js/check-proxy.js "$DEST:$WEB/js/check-proxy.js"
+          $SCP js/site-header.js "$DEST:$WEB/js/site-header.js"
+          $SCP index.html "$DEST:$WEB/index.html"
+          $SCP api/src/proxy-check.js "$DEST:/var/www/vuaproxy-api/src/proxy-check.js"
+          $SCP api/src/server.js "$DEST:/var/www/vuaproxy-api/src/server.js"
+          $SSH "$DEST" 'bash -s' <<'R'
+          set -euo pipefail
+          test -f /var/www/vuaproxy-web/check-proxy.html
+          test -f /var/www/vuaproxy-web/css/check-proxy.css
+          test -f /var/www/vuaproxy-web/js/check-proxy.js
+          test -f /var/www/vuaproxy-api/src/proxy-check.js
+          node --check /var/www/vuaproxy-api/src/proxy-check.js
+          node --check /var/www/vuaproxy-api/src/server.js
+          pm2 restart vuaproxy-api --update-env
+          sleep 2
+          curl -sS -m 8 http://127.0.0.1:3101/health; echo
+          code=$(curl -sS -m 8 -o /tmp/cp.html -w '%{http_code}' -H 'Host: www.vuaproxy.cloud' http://127.0.0.1/check-proxy)
+          echo "page $code"
+          grep -q 'Proxy Check Results' /tmp/cp.html
+          grep -q 'Check Proxy' /var/www/vuaproxy-web/js/site-header.js
+          printf '%s' '{"proxies":["not-a-proxy"],"format":"host:port:username:password","type":"auto"}' > /tmp/cp.json
+          curl -sS -m 8 -H 'Content-Type: application/json' --data-binary @/tmp/cp.json http://127.0.0.1:3101/proxy-check/submit
+          echo
+          echo CHECK_PROXY_OK
+          R

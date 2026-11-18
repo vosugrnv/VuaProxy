@@ -56,7 +56,7 @@
     document.querySelectorAll("#walletBalanceBadge, .wallet-balance-badge, #cartTotalTop").forEach((el) => el.remove());
   }
 
-  const SHELL_VER = "v26";
+  const SHELL_VER = "v27";
 
   function navLinksHtml() {
     return (
@@ -67,6 +67,7 @@
       '<a href="/tat-ca-khu-vuc" class="nav-all-proxy" id="navAllProxy" aria-haspopup="true" aria-expanded="false">' +
       '<span class="nav-ico nav-ico--red" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>' +
       'Tất cả Proxy<span class="nav-all-proxy-caret" aria-hidden="true"></span></a>' +
+      '<a href="/check-proxy"><span class="nav-ico nav-ico--teal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></span>Check Proxy</a>' +
       '<a href="/chia-se"><span class="nav-ico nav-ico--orange" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span>Chia sẻ</a>' +
       '<a href="/lien-he"><span class="nav-ico nav-ico--green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg></span>Liên hệ</a>' +
       '<a href="/nap-tien"><span class="nav-ico nav-ico--pink" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><path d="M16 14h2"/></svg></span>Nạp tiền</a>' +
@@ -125,6 +126,7 @@
       header.querySelector(".nav-links") &&
       header.querySelector("#navAllProxy") &&
       header.querySelector("#catMenuBtn") &&
+      header.querySelector('.nav-links a[href="/check-proxy"]') &&
       !header.querySelector(".proxy-type-nav") &&
       !header.querySelector('.nav-links img[src*="khotaikhoan"]') &&
       navActions &&
@@ -180,6 +182,7 @@
       '<a href="/#reviews">Đánh giá</a>' +
       '<div class="drawer-title" style="margin-top:18px">Menu</div>' +
       '<a href="/tat-ca-khu-vuc">Tất cả quốc gia</a>' +
+      '<a href="/check-proxy">Check Proxy</a>' +
       '<a href="/chia-se">Chia sẻ</a>' +
       '<a href="/lien-he">Liên hệ</a>' +
       '<a href="/nap-tien">Nạp tiền</a>' +
