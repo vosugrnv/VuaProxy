@@ -1,15 +1,64 @@
-/* Check Proxy — layout khớp checkproxy.vip, nằm trong site Vua Proxy */
+/* Check Proxy — layout khớp checkproxy.vip, trang riêng không header/footer */
+html,
+body.check-proxy-solo {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: Arial, "Be Vietnam Pro", sans-serif;
+  background: #eef4ff;
+  color: #333946;
+}
+
+body.check-proxy-solo .site-header,
+body.check-proxy-solo .site-footer,
+body.check-proxy-solo .side-nav,
+body.check-proxy-solo .drawer,
+body.check-proxy-solo .drawer-backdrop,
+body.check-proxy-solo .bottom-nav,
+body.check-proxy-solo .chat-fab,
+body.check-proxy-solo .chat-panel,
+body.check-proxy-solo .chat-widget,
+body.check-proxy-solo .side-banners,
+body.check-proxy-solo .side-banner,
+body.check-proxy-solo .ticker,
+body.check-proxy-solo .announce-bar {
+  display: none !important;
+}
+
+.cp-home {
+  position: fixed;
+  top: 14px;
+  left: 16px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+}
+
+.cp-home:hover {
+  color: #007bff;
+}
+
 .check-proxy-page {
   background: #eef4ff;
-  padding: 24px 0 48px;
-  min-height: 70vh;
+  padding: 56px 0 48px;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .check-proxy-page .cp-wrap {
   display: flex;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 20px;
   gap: 20px;
   align-items: flex-start;
 }
@@ -33,8 +82,7 @@
 }
 
 .check-proxy-page .cp-form,
-.check-proxy-page .cp-status,
-.check-proxy-page .cp-results {
+.check-proxy-page .cp-status {
   margin-bottom: 20px;
 }
 
@@ -53,6 +101,7 @@
   font-size: 18px;
   font-weight: 700;
   margin: 0 0 8px;
+  line-height: 1.3;
 }
 
 .check-proxy-page .cp-form label {
@@ -63,7 +112,7 @@
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
-  color: #4b5563;
+  color: #333946;
 }
 
 .check-proxy-page .cp-form select,
@@ -77,6 +126,7 @@
   font-size: 16px;
   font-family: inherit;
   box-sizing: border-box;
+  background: #fff;
 }
 
 .check-proxy-page .cp-form textarea {
@@ -144,26 +194,86 @@
   min-height: 1.2em;
 }
 
+/* Results card — giống mẫu checkproxy.vip */
+.check-proxy-page .cp-results {
+  margin: 0;
+}
+
+.check-proxy-page .cp-results h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2f3640;
+}
+
+.check-proxy-page .cp-results h2 .cp-ico {
+  width: 20px;
+  height: 20px;
+  color: #2f3640;
+}
+
+.check-proxy-page .cp-table-wrap {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  background: #fff;
+}
+
 .check-proxy-page .cp-results table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 16px;
-  margin-top: 12px;
+  margin: 0;
 }
 
 .check-proxy-page .cp-results th,
 .check-proxy-page .cp-results td {
   border: 1px solid #ddd;
-  padding: 8px;
+  padding: 10px 12px;
   text-align: left;
-  vertical-align: top;
-  word-break: break-all;
+  vertical-align: middle;
+  word-break: break-word;
 }
 
-.check-proxy-page .cp-results th {
+.check-proxy-page .cp-results thead th {
   background: #f2f2f2;
+  color: #111;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.check-proxy-page .cp-results th:nth-child(1),
+.check-proxy-page .cp-results td:nth-child(1) {
+  width: 64px;
+}
+
+.check-proxy-page .cp-results th:nth-child(2),
+.check-proxy-page .cp-results td:nth-child(2) {
+  width: 28%;
+}
+
+.check-proxy-page .cp-results th:nth-child(3),
+.check-proxy-page .cp-results td:nth-child(3) {
+  width: 28%;
+}
+
+.check-proxy-page .cp-results th:nth-child(4),
+.check-proxy-page .cp-results td:nth-child(4) {
+  width: 22%;
+}
+
+.check-proxy-page .cp-results th:nth-child(5),
+.check-proxy-page .cp-results td:nth-child(5) {
+  width: 12%;
+  text-align: center;
+}
+
+.check-proxy-page .cp-results tbody:empty::after {
+  content: "";
+  display: block;
+  min-height: 48px;
 }
 
 .check-proxy-page .status-live {
@@ -205,7 +315,29 @@
   }
 }
 
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: #111827;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 50;
+  display: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.toast.show {
+  display: block;
+}
+
 @media (max-width: 900px) {
+  .check-proxy-page {
+    padding-top: 64px;
+  }
   .check-proxy-page .cp-wrap {
     flex-direction: column;
   }
@@ -213,10 +345,11 @@
   .check-proxy-page .cp-right {
     width: 100%;
   }
-  .check-proxy-page .cp-results {
+  .check-proxy-page .cp-table-wrap {
     overflow-x: auto;
   }
   .check-proxy-page .cp-results table {
     min-width: 640px;
+    table-layout: auto;
   }
 }
