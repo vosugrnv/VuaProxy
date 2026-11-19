@@ -60,7 +60,7 @@ body.check-proxy-solo .announce-bar {
   margin: 0 auto;
   padding: 0 20px;
   gap: 20px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .check-proxy-page .cp-left,
@@ -79,6 +79,9 @@ body.check-proxy-solo .announce-bar {
 .check-proxy-page .cp-right {
   flex: 2;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .check-proxy-page .cp-form,
@@ -194,9 +197,13 @@ body.check-proxy-solo .announce-bar {
   min-height: 1.2em;
 }
 
-/* Results card — giống mẫu checkproxy.vip */
+/* Results card — giống mẫu checkproxy.vip, cao bằng cột trái kể cả khi trống */
 .check-proxy-page .cp-results {
   margin: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .check-proxy-page .cp-results h2 {
@@ -204,6 +211,7 @@ body.check-proxy-solo .announce-bar {
   font-size: 22px;
   font-weight: 700;
   color: #2f3640;
+  flex: 0 0 auto;
 }
 
 .check-proxy-page .cp-results h2 .cp-ico {
@@ -214,10 +222,12 @@ body.check-proxy-solo .announce-bar {
 
 .check-proxy-page .cp-table-wrap {
   width: 100%;
-  overflow: hidden;
+  flex: 1 1 auto;
+  overflow: auto;
   border: 1px solid #ddd;
   border-radius: 2px;
   background: #fff;
+  min-height: 280px;
 }
 
 .check-proxy-page .cp-results table {
