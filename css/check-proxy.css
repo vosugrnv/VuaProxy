@@ -271,7 +271,7 @@ body.check-proxy-solo .announce-bar {
 
 /* Proxy — rộng nhất, 1 dòng */
 .check-proxy-page .cp-results col.cp-col-proxy {
-  width: 42%;
+  width: 54%;
 }
 .check-proxy-page .cp-results th:nth-child(2),
 .check-proxy-page .cp-results td:nth-child(2) {
@@ -281,28 +281,22 @@ body.check-proxy-solo .announce-bar {
 
 /* IP Address */
 .check-proxy-page .cp-results col.cp-col-ip {
-  width: 150px;
+  width: 140px;
 }
 .check-proxy-page .cp-results th:nth-child(3),
 .check-proxy-page .cp-results td:nth-child(3) {
-  width: 150px;
+  width: 140px;
   white-space: nowrap;
 }
 
-/* Status */
+/* Status — chỉ Live / Die */
 .check-proxy-page .cp-results col.cp-col-status {
-  width: 170px;
+  width: 88px;
 }
 .check-proxy-page .cp-results th:nth-child(4),
 .check-proxy-page .cp-results td:nth-child(4) {
-  width: 170px;
+  width: 88px;
   white-space: nowrap;
-}
-
-.check-proxy-page .cp-results td:nth-child(4) .status-die + .latency,
-.check-proxy-page .cp-results td:nth-child(4) .latency.status-err {
-  display: inline;
-  white-space: normal;
 }
 
 /* Type */
