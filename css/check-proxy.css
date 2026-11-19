@@ -234,16 +234,19 @@ body.check-proxy-solo .announce-bar {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 15px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.35;
   margin: 0;
 }
 
 .check-proxy-page .cp-results th,
 .check-proxy-page .cp-results td {
   border: 1px solid #ddd;
-  padding: 8px 10px;
+  padding: 8px;
   text-align: left;
   vertical-align: middle;
+  font-size: 16px;
 }
 
 .check-proxy-page .cp-results thead th {
@@ -253,50 +256,68 @@ body.check-proxy-solo .announce-bar {
   white-space: nowrap;
 }
 
-/* No — rất hẹp */
+/* No */
+.check-proxy-page .cp-results col.cp-col-no {
+  width: 42px;
+}
 .check-proxy-page .cp-results th:nth-child(1),
 .check-proxy-page .cp-results td:nth-child(1) {
-  width: 36px;
-  padding-left: 4px;
-  padding-right: 4px;
-  text-align: center;
+  width: 42px;
+  padding-left: 6px;
+  padding-right: 6px;
+  text-align: left;
   white-space: nowrap;
 }
 
-/* Proxy — rộng, không xuống dòng */
+/* Proxy — rộng nhất, 1 dòng */
+.check-proxy-page .cp-results col.cp-col-proxy {
+  width: 42%;
+}
 .check-proxy-page .cp-results th:nth-child(2),
 .check-proxy-page .cp-results td:nth-child(2) {
-  width: auto;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
 }
 
-/* IP Address — vừa một IPv4 */
+/* IP Address */
+.check-proxy-page .cp-results col.cp-col-ip {
+  width: 150px;
+}
 .check-proxy-page .cp-results th:nth-child(3),
 .check-proxy-page .cp-results td:nth-child(3) {
-  width: 128px;
+  width: 150px;
   white-space: nowrap;
 }
 
-/* Status — live/die + latency */
+/* Status */
+.check-proxy-page .cp-results col.cp-col-status {
+  width: 170px;
+}
 .check-proxy-page .cp-results th:nth-child(4),
 .check-proxy-page .cp-results td:nth-child(4) {
-  width: 168px;
-  white-space: normal;
-  word-break: break-word;
+  width: 170px;
+  white-space: nowrap;
 }
 
-/* Type — rất hẹp, căn giữa */
+.check-proxy-page .cp-results td:nth-child(4) .status-die + .latency,
+.check-proxy-page .cp-results td:nth-child(4) .latency.status-err {
+  display: inline;
+  white-space: normal;
+}
+
+/* Type */
+.check-proxy-page .cp-results col.cp-col-type {
+  width: 70px;
+}
 .check-proxy-page .cp-results th:nth-child(5),
 .check-proxy-page .cp-results td:nth-child(5) {
-  width: 54px;
-  padding-left: 4px;
-  padding-right: 4px;
+  width: 70px;
+  padding-left: 6px;
+  padding-right: 6px;
   text-align: center;
   white-space: nowrap;
-  color: #78c878;
-  font-weight: 600;
+  color: #90ee90;
+  font-weight: 400;
 }
 
 .check-proxy-page .cp-results thead th:nth-child(5) {
@@ -332,6 +353,7 @@ body.check-proxy-solo .announce-bar {
   font-size: 12px;
   color: #888;
   margin-left: 4px;
+  font-weight: 400;
 }
 
 .check-proxy-page .cp-spin {
@@ -383,6 +405,6 @@ body.check-proxy-solo .announce-bar {
     overflow-x: auto;
   }
   .check-proxy-page .cp-results table {
-    min-width: 680px;
+    min-width: 760px;
   }
 }

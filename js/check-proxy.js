@@ -153,14 +153,20 @@
           if (!row) continue;
           const proxy = proxyList[r.id];
           row.cells[2].textContent = r.ip || "-";
-          row.cells[3].innerHTML = r.live
-            ? '<span class="status-live">✔️ live</span> <span class="latency">' +
+          if (r.live) {
+            row.cells[3].innerHTML =
+              '<span class="status-live">✔️ live</span> <span class="latency">' +
               Number(r.latency || 0) +
-              "ms</span>"
-            : '<span class="status-die">❌ die</span> <span class="latency">' +
-              esc(r.error || "") +
-              "</span>";
-          row.cells[4].textContent = String(r.protocol || "-").toUpperCase();
+              "ms</span>";
+          } else {
+            const err = String(r.error || "").replace(/^curl:\s*/i, "").slice(0, 42);
+            row.cells[3].innerHTML =
+              '<span class="status-die">❌ die</span>' +
+              (err ? ' <span class="latency">' + esc(err) + "</span>" : "");
+          }
+          row.cells[4].textContent = r.live
+            ? String(r.protocol || "-").toUpperCase()
+            : "-";
           if (r.live) activeProxies.push(proxy);
           else inactiveProxies.push(proxy);
         }
