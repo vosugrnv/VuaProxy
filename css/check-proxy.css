@@ -234,17 +234,16 @@ body.check-proxy-solo .announce-bar {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 16px;
+  font-size: 15px;
   margin: 0;
 }
 
 .check-proxy-page .cp-results th,
 .check-proxy-page .cp-results td {
   border: 1px solid #ddd;
-  padding: 10px 12px;
+  padding: 8px 10px;
   text-align: left;
   vertical-align: middle;
-  word-break: break-word;
 }
 
 .check-proxy-page .cp-results thead th {
@@ -254,30 +253,49 @@ body.check-proxy-solo .announce-bar {
   white-space: nowrap;
 }
 
+/* No — hẹp */
 .check-proxy-page .cp-results th:nth-child(1),
 .check-proxy-page .cp-results td:nth-child(1) {
-  width: 64px;
+  width: 48px;
+  text-align: center;
+  white-space: nowrap;
 }
 
+/* Proxy — chiếm phần còn lại */
 .check-proxy-page .cp-results th:nth-child(2),
 .check-proxy-page .cp-results td:nth-child(2) {
-  width: 28%;
+  width: auto;
+  word-break: break-all;
 }
 
+/* IP Address — vừa một IPv4 */
 .check-proxy-page .cp-results th:nth-child(3),
 .check-proxy-page .cp-results td:nth-child(3) {
-  width: 28%;
+  width: 140px;
+  white-space: nowrap;
 }
 
+/* Status — live/die + latency */
 .check-proxy-page .cp-results th:nth-child(4),
 .check-proxy-page .cp-results td:nth-child(4) {
-  width: 22%;
+  width: 150px;
+  white-space: normal;
+  word-break: break-word;
 }
 
+/* Type — hẹp, căn giữa */
 .check-proxy-page .cp-results th:nth-child(5),
 .check-proxy-page .cp-results td:nth-child(5) {
-  width: 12%;
+  width: 72px;
   text-align: center;
+  white-space: nowrap;
+  color: #78c878;
+  font-weight: 600;
+}
+
+.check-proxy-page .cp-results thead th:nth-child(5) {
+  color: #111;
+  font-weight: 700;
 }
 
 .check-proxy-page .cp-results tbody:empty::after {
@@ -359,7 +377,6 @@ body.check-proxy-solo .announce-bar {
     overflow-x: auto;
   }
   .check-proxy-page .cp-results table {
-    min-width: 640px;
-    table-layout: auto;
+    min-width: 680px;
   }
 }
