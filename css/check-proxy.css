@@ -289,13 +289,13 @@ body.check-proxy-solo .announce-bar {
   white-space: nowrap;
 }
 
-/* Status — chỉ Live / Die */
+/* Status — Live/Die + ms */
 .check-proxy-page .cp-results col.cp-col-status {
-  width: 88px;
+  width: 118px;
 }
 .check-proxy-page .cp-results th:nth-child(4),
 .check-proxy-page .cp-results td:nth-child(4) {
-  width: 88px;
+  width: 118px;
   white-space: nowrap;
 }
 

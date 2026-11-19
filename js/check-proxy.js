@@ -154,7 +154,9 @@
           const proxy = proxyList[r.id];
           row.cells[2].textContent = r.ip || "-";
           row.cells[3].innerHTML = r.live
-            ? '<span class="status-live">✔️ live</span>'
+            ? '<span class="status-live">✔️ live</span> <span class="latency">' +
+              Number(r.latency || 0) +
+              "ms</span>"
             : '<span class="status-die">❌ die</span>';
           row.cells[4].textContent = r.live
             ? String(r.protocol || "-").toUpperCase()
